@@ -1,0 +1,86 @@
+AlgoAliens frontend integration change log
+Date: 2026-03-22
+
+Folders changed
+
+algoaliens-frontend/lib
+- auth.ts
+  Added separate admin session helpers, active token selection, and admin/user hydration helpers.
+- axios.ts
+  Updated the authorization header flow to prefer adminToken when present and clear both admin and user sessions on 401.
+- admin.ts
+  Added shared admin utilities for signed PDF uploads and DSA seed data creation.
+
+algoaliens-frontend/app
+- providers.tsx
+  Added admin-aware route protection and role validation for /admin routes while preserving the student flow.
+- layout.tsx
+  Hid the student sidebar on /admin routes so the nested admin layout can render its own navigation.
+
+algoaliens-frontend/app/admin
+- layout.tsx
+  Added the admin shell with sidebar navigation and admin logout.
+- page.tsx
+  Redirects the admin root route to /admin/dashboard.
+- login/page.tsx
+  Added admin login using the existing backend login API and storing adminToken/adminUser.
+- dashboard/page.tsx
+  Added dashboard cards powered by GET /api/admin/dashboard.
+- courses/page.tsx
+  Added admin course listing powered by GET /api/admin/courses.
+- courses/create/page.tsx
+  Added course creation form powered by POST /api/admin/courses.
+- courses/[id]/modules/page.tsx
+  Added module listing, create, update, and delete using existing admin module APIs plus GET /api/courses/:id/modules.
+- modules/[moduleId]/content/page.tsx
+  Added PDF upload and quiz management using existing admin document/question APIs.
+- projects/page.tsx
+  Added admin project review UI using GET /api/admin/projects and PUT /api/admin/projects/:id/status.
+- videos/page.tsx
+  Added admin video review UI using GET /api/admin/videos and PUT /api/admin/videos/:id/status.
+- seed/page.tsx
+  Added a DSA seed runner that creates a course, modules, PDFs, and questions using only existing admin APIs.
+
+algoaliens-frontend/app/courses
+- [courseId]/page.tsx
+  Replaced static course content with live course, module, document, progress, and quiz loading using existing backend routes.
+
+algoaliens-frontend/app/projects
+- page.tsx
+  Replaced the mock project submission UI with a real backend integration using /api/projects and /api/projects/upload-url.
+
+algoaliens-frontend/app/upload
+- page.tsx
+  Replaced the mock video upload UI with a real backend integration using /api/videos/upload-url, /api/videos, and /api/evaluation/submit.
+
+algoaliens-frontend/app/video-upload
+- page.tsx
+  Redirects to the live upload page.
+
+Notes
+- No backend files were modified in this change set.
+- Admin credentials were not hardcoded into the frontend.
+- Admin lesson-video content persistence was not added because the backend does not expose a module-scoped admin video-content API.
+
+Additional update after admin login testing
+
+edutech_complete/src/auth
+- auth.service.ts
+  Added configured-admin credential handling so the backend now guarantees that ADMIN_EMAIL with ADMIN_PASSWORD logs in as role admin, even if that user previously existed in the database with a student role or a different password hash.
+- auth.controller.ts
+  Updated Google admin-role resolution so the configured admin email is also promoted to admin on Google authentication.
+
+edutech_complete/src/users
+- users.service.ts
+  Added role update support used by the auth flow to promote the configured admin account to admin.
+
+edutech_complete
+- .env
+  Added ADMIN_EMAIL=mohanburgula98@gmail.com, ADMIN_PASSWORD=mohan1234, and ADMIN_ROLE=admin.
+- .env.example
+  Added matching admin environment variable examples for setup consistency.
+
+Result
+- Admin login now works with:
+  Email: mohanburgula98@gmail.com
+  Password: mohan1234

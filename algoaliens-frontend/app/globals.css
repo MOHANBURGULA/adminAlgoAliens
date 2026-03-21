@@ -1,0 +1,113 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+/* ---------- GLOBAL BODY ---------- */
+
+body{
+  background: #06020D;
+  color: white;
+}
+
+
+/* ---------- GRID BACKGROUND (GLOBAL) ---------- */
+
+.grid-bg{
+  background-color:#070312;
+
+  background-image:
+  linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+  linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+
+  background-size:70px 80px;
+}
+
+
+/* ---------- COMPONENT LAYER ---------- */
+
+@layer components {
+
+/* dashboard card style */
+
+.dashboard-card{
+  @apply bg-[#130A24] border border-[#2B1A47] rounded-xl;
+}
+
+
+/* ---------- CARD HOVER ---------- */
+
+.card-ui{
+  @apply bg-[#0f0622] border border-purple-700/30 rounded-xl p-6 transition-all duration-300;
+}
+
+.card-ui:hover{
+  @apply border-purple-500 bg-[#140a2e] -translate-y-[2px] shadow-lg shadow-purple-500/20;
+}
+
+
+/* ---------- BUTTON ---------- */
+
+.btn-primary{
+  @apply px-5 py-3 rounded-lg font-semibold 
+  bg-gradient-to-r from-purple-500 via-purple-400 to-cyan-400
+  transition-all duration-200;
+}
+
+.btn-primary:hover{
+  @apply scale-[1.03] shadow-lg shadow-purple-500/30;
+}
+
+.btn-primary:active{
+  @apply scale-[0.98];
+}
+
+
+/* ---------- INPUT ---------- */
+
+.input-ui{
+  @apply w-full bg-[#140a2e] border border-purple-700/30 rounded-lg px-4 py-3 text-white transition;
+}
+
+.input-ui:hover{
+  @apply border-purple-500;
+}
+
+.input-ui:focus{
+  @apply border-purple-500 ring-2 ring-purple-500/30 outline-none;
+}
+
+
+/* ---------- LIST ITEM ---------- */
+
+.list-item{
+  @apply flex items-center justify-between px-4 py-3 rounded-lg transition;
+}
+
+.list-item:hover{
+  @apply bg-[#140a2e];
+}
+
+
+/* ---------- SIDEBAR ITEM ---------- */
+
+.sidebar-item{
+  @apply flex items-center gap-3 px-4 py-2 rounded-lg text-gray-300 transition;
+}
+
+.sidebar-item:hover{
+  @apply bg-purple-600/20 text-white;
+}
+
+
+/* ---------- UPLOAD BOX ---------- */
+
+.upload-box{
+  @apply border border-purple-700/30 bg-[#0f0622] rounded-xl p-10 text-center transition-all;
+}
+
+.upload-box:hover{
+  @apply border-purple-500 bg-[#140a2e] shadow-lg shadow-purple-500/20;
+}
+
+}
