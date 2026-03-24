@@ -37,7 +37,7 @@ export default function CourseCard({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-800 bg-white/[0.03] p-3 text-cyan-200">
+        <div className="rounded-2xl border border-slate-800 bg-white/[0.03] p-3 text-indigo-200">
           <ScrollText size={20} />
         </div>
       </div>

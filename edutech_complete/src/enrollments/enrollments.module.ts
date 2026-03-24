@@ -1,18 +1,19 @@
 import { Module } from '@nestjs/common'
 import { TypeOrmModule } from '@nestjs/typeorm'
+import { AuthModule } from '../auth/auth.module'
+import { CertificatesModule } from '../certificates/certificates.module'
+import { Course } from '../courses/course.entity'
+import { EnrollmentsController } from './enrollments.controller'
 import { Enrollment } from './enrollment.entity'
 import { EnrollmentsService } from './enrollments.service'
-import { EnrollmentsController } from './enrollments.controller'
-import { CertificatesModule } from '../certificates/certificates.module'
-import { AuthModule } from '../auth/auth.module'   // ← ADD THIS
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Enrollment]),
+    TypeOrmModule.forFeature([Enrollment, Course]),
     CertificatesModule,
-    AuthModule   // ← ADD THIS
+    AuthModule,
   ],
   controllers: [EnrollmentsController],
-  providers: [EnrollmentsService]
+  providers: [EnrollmentsService],
 })
 export class EnrollmentsModule {}

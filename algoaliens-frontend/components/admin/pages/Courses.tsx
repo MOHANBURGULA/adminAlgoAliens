@@ -140,7 +140,7 @@ export default function CoursesAdminPage() {
       <div className="mx-auto max-w-7xl space-y-8">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-xs font-medium uppercase tracking-[0.24em] text-cyan-200/80">
+            <p className="text-xs font-medium uppercase tracking-[0.24em] text-indigo-200/80">
               Admin course inventory
             </p>
             <h1 className="mt-3 text-3xl text-white">Courses</h1>

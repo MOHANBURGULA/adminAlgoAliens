@@ -1,11 +1,18 @@
 import { BadRequestException, Body, Controller, Get, Post, Put, Req, UseGuards } from '@nestjs/common'
-import { UsersService } from './users.service'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
+import { MetricNames } from '../redis/cache.helpers'
+import { RedisMetricsService } from '../redis/redis-metrics.service'
+import { RedisRateLimit } from '../redis/redis-rate-limit.decorator'
+import { RedisRateLimitGuard } from '../redis/redis-rate-limit.guard'
 import type { GoogleLoginPayload, UpdateUserPayload, UserProfilePayload } from './users.types'
+import { UsersService } from './users.service'
 
 @Controller('api/users')
 export class UsersController {
-  constructor(private usersService: UsersService) {}
+  constructor(
+    private usersService: UsersService,
+    private readonly redisMetricsService: RedisMetricsService,
+  ) {}
 
   private serializeUser(user: {
     id: number
@@ -38,6 +45,8 @@ export class UsersController {
     return { email, name }
   }
 
+  @UseGuards(RedisRateLimitGuard)
+  @RedisRateLimit({ keyPrefix: 'users:google-login', limit: 10, windowSeconds: 60 })
   @Post('google-login')
   async googleLogin(@Body() body: GoogleLoginPayload) {
     const { email, name } = this.validateGoogleLoginBody(body)
@@ -56,6 +65,13 @@ export class UsersController {
     }
 
     const token = this.usersService.generateJwt(user)
+
+    await Promise.all([
+      this.redisMetricsService.increment(MetricNames.authLoginSuccess),
+      isNewUser
+        ? this.redisMetricsService.increment(MetricNames.signupSuccess)
+        : Promise.resolve(null),
+    ])
 
     return {
       token,

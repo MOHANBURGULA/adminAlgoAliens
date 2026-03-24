@@ -119,7 +119,7 @@ export default function AdminAnalyticsPage() {
           value={users.length}
           hint="All student and admin accounts"
           icon={Users}
-          accentClassName="text-cyan-200"
+          accentClassName="text-indigo-200"
         />
         <StatsCard
           label="Total Enrollments"

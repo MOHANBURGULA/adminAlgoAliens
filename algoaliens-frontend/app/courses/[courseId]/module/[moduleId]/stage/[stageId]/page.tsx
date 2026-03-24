@@ -13,7 +13,7 @@ import {
 
 export default function VideoUploadPage() {
 
-  const [video, setVideo] = useState<File | null>(null)
+  const [, setVideo] = useState<File | null>(null)
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
 
@@ -124,7 +124,7 @@ transition-all duration-300">
       {/* SUBMIT BUTTON */}
 
       <button
-        className="w-full py-3 rounded-lg bg-gradient-to-r from-purple-500 via-purple-400 to-cyan-400 font-semibold hover:opacity-90 flex items-center justify-center gap-2"
+        className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-700 py-3 font-semibold hover:opacity-90"
       >
         <Send size={18}/>
         Submit for Review

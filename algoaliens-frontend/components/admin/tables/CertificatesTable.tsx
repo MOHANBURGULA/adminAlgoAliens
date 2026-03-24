@@ -24,7 +24,7 @@ function getScoreTone(score: number) {
   }
 
   if (score >= 75) {
-    return "cyan" as const
+    return "indigo" as const
   }
 
   if (score >= 60) {

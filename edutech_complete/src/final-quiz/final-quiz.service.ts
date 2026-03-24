@@ -4,6 +4,14 @@ import { Repository } from 'typeorm'
 import { FinalQuizAttempt } from './final-quiz.entity'
 import { QuestionsService } from '../questions/questions.service'
 import { ModulesService } from '../modules/modules.service'
+import {
+  CACHE_TTL_SECONDS,
+  CacheKeys,
+  MetricNames,
+  TimerKeys,
+} from '../redis/cache.helpers'
+import { RedisMetricsService } from '../redis/redis-metrics.service'
+import { RedisService } from '../redis/redis.service'
 
 const FINAL_QUIZ_PASS_THRESHOLD = 80 // 80% required
 
@@ -15,7 +23,9 @@ export class FinalQuizService {
     private repo: Repository<FinalQuizAttempt>,
 
     private questionsService: QuestionsService,
-    private modulesService: ModulesService
+    private modulesService: ModulesService,
+    private readonly redisService: RedisService,
+    private readonly redisMetricsService: RedisMetricsService,
   ) {}
 
   async submitFinalQuiz(
@@ -45,6 +55,17 @@ export class FinalQuizService {
     const attempt = this.repo.create({ userId, courseId, answers, score, passed })
     await this.repo.save(attempt)
 
+    await Promise.all([
+      this.redisService.del(
+        CacheKeys.finalQuizAttemptsUserCourse(userId, courseId),
+        TimerKeys.finalQuiz(userId, courseId),
+      ),
+      this.redisMetricsService.increment(MetricNames.finalQuizSubmitted),
+      passed
+        ? this.redisMetricsService.increment(MetricNames.finalQuizPassed)
+        : Promise.resolve(null),
+    ])
+
     return {
       score,
       passed,
@@ -64,8 +85,21 @@ export class FinalQuizService {
     return !!attempt
   }
 
-  getAttempts(userId: number, courseId: number) {
-    return this.repo.find({ where: { userId, courseId } })
+  async getAttempts(userId: number, courseId: number) {
+    const cacheKey = CacheKeys.finalQuizAttemptsUserCourse(userId, courseId)
+    const cachedAttempts = await this.redisService.getCache<FinalQuizAttempt[]>(cacheKey)
+    if (cachedAttempts !== null) {
+      return cachedAttempts
+    }
+
+    const attempts = await this.repo.find({ where: { userId, courseId } })
+    await this.redisService.setCache(
+      cacheKey,
+      attempts,
+      CACHE_TTL_SECONDS.finalQuizAttemptsUserCourse,
+    )
+
+    return attempts
   }
 
 }

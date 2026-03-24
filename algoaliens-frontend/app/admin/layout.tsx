@@ -82,7 +82,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="admin-shell flex min-h-screen bg-[#0B0F1A] text-white">
       <aside className="hidden w-72 border-r border-slate-800 bg-[linear-gradient(180deg,rgba(17,24,39,0.98),rgba(11,15,26,0.98))] p-6 md:flex md:flex-col">
         <Link href="/admin/dashboard" className="block">
-          <p className="text-xs uppercase tracking-[0.24em] text-cyan-200/80">Control center</p>
+          <p className="text-xs uppercase tracking-[0.24em] text-indigo-200/80">Control center</p>
           <h1 className="mt-3 text-2xl font-semibold text-white">AlgoAliens Admin</h1>
         </Link>
 
@@ -97,7 +97,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 href={link.href}
                 className={`flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm transition-all duration-200 ${
                   active
-                    ? "border-cyan-500/20 bg-cyan-500/10 text-cyan-100"
+                    ? "border-indigo-500/20 bg-indigo-500/10 text-indigo-100"
                     : "border-transparent text-slate-300 hover:border-slate-800 hover:bg-white/[0.03] hover:text-white"
                 }`}
               >

@@ -3,23 +3,14 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import toast from "react-hot-toast"
-import {
-  ArrowRight,
-  Check,
-  Edit3,
-  LogOut,
-  Mail,
-  Save,
-  ShieldCheck,
-  Sparkles,
-  Target,
-  User,
-  X,
-} from "lucide-react"
+import { Edit3, LogOut, Mail, Save, ShieldCheck, Target, User, X } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { clearAuthSession } from "@/lib/auth"
 import { apiClient } from "@/lib/axios"
 import { getApiErrorMessage, isAxiosStatus } from "@/lib/http"
 import { normalizeUserProfile } from "@/lib/profile"
+import { cn } from "@/lib/utils"
 
 type UserResponse = {
   id: number
@@ -42,28 +33,28 @@ function formatLabel(value?: string) {
   return value.charAt(0).toUpperCase() + value.slice(1)
 }
 
-function InfoCard({
-  icon,
+function DetailCard({
   label,
   value,
+  accentClassName,
 }: {
-  icon: React.ReactNode
   label: string
   value: string
+  accentClassName: string
 }) {
   return (
-    <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-5 backdrop-blur-sm">
-      <div className="flex items-center gap-2 text-sm text-gray-400">
-        {icon}
-        {label}
-      </div>
-      <p className="mt-3 text-lg font-medium text-white">{value}</p>
+    <div className="group rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(25,14,43,0.94),rgba(18,11,32,0.94))] p-5 shadow-[0_18px_44px_rgba(9,3,18,0.24)] transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] hover:border-fuchsia-400/24 hover:shadow-[0_22px_54px_rgba(168,85,247,0.2)]">
+      <div className={cn("h-1.5 w-14 rounded-full bg-gradient-to-r", accentClassName)} />
+      <p className="mt-4 text-sm tracking-[0.02em] text-fuchsia-100/72">{label}</p>
+      <p className="mt-2 text-lg font-medium text-white">{value}</p>
     </div>
   )
 }
 
 export default function ProfilePage() {
   const router = useRouter()
+  const editorFieldClassName =
+    "space-y-3 rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(24,13,40,0.94),rgba(17,10,30,0.94))] p-4 shadow-[0_18px_42px_rgba(9,3,18,0.18)] transition-all duration-300 hover:-translate-y-0.5 hover:border-fuchsia-400/20 hover:shadow-[0_20px_48px_rgba(168,85,247,0.18)]"
   const [user, setUser] = useState<UserResponse | null>(null)
   const [profile, setProfile] = useState<ProfileResponse | null>(null)
   const [editMode, setEditMode] = useState(false)
@@ -109,9 +100,7 @@ export default function ProfilePage() {
 
         if (!cancelled) {
           const userData = userRes.data as UserResponse
-          const profileData = normalizeUserProfile(
-            profileRes.data as Partial<ProfileResponse>,
-          )
+          const profileData = normalizeUserProfile(profileRes.data as Partial<ProfileResponse>)
           setUser(userData)
           setProfile(profileData)
           hydrateForms(userData, profileData)
@@ -156,8 +145,8 @@ export default function ProfilePage() {
       setResetStatus(message)
       setResetStatusType("success")
       toast.success(message)
-    } catch (error: unknown) {
-      const message = getApiErrorMessage(error, "Unable to send reset link.")
+    } catch (resetError: unknown) {
+      const message = getApiErrorMessage(resetError, "Unable to send reset link.")
       setResetStatus(message)
       setResetStatusType("error")
       toast.error(message)
@@ -215,7 +204,7 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[55vh] items-center justify-center rounded-3xl border border-purple-900/20 bg-[#0B0518]/80 text-gray-300">
+      <div className="card-ui flex min-h-[55vh] items-center justify-center text-gray-300">
         Loading profile...
       </div>
     )
@@ -223,36 +212,29 @@ export default function ProfilePage() {
 
   if (error) {
     return (
-      <div className="rounded-3xl border border-red-500/20 bg-red-500/10 p-6 text-red-100">
+      <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-6 text-red-100">
         {error}
       </div>
     )
   }
 
   if (!user || !profile) {
-    return (
-      <div className="rounded-3xl border border-dashed border-purple-900/40 bg-[#0B0518] p-8 text-gray-400">
-        Profile data is not available yet.
-      </div>
-    )
+    return <div className="card-ui text-gray-300">Profile data is not available yet.</div>
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8">
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+    <div className="mx-auto max-w-4xl space-y-8">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/20 bg-purple-500/10 px-4 py-2 text-xs font-medium uppercase tracking-[0.18em] text-purple-200">
-            <Sparkles size={14} />
-            Profile Overview
-          </div>
-          <h1 className="mt-5 text-4xl font-bold tracking-tight text-white">Your learner identity</h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-400">
-            Review your account information, learning focus, and password reset options in one place.
+          <h1 className="text-3xl font-semibold text-purple-300">Profile</h1>
+          <p className="mt-2 text-sm text-gray-400">
+            Account and learning profile details from backend APIs.
           </p>
         </div>
 
-        <button
+        <Button
           type="button"
+          variant={editMode ? "secondary" : "primary"}
           onClick={() => {
             if (editMode && user && profile) {
               hydrateForms(user, profile)
@@ -262,182 +244,185 @@ export default function ProfilePage() {
 
             setEditMode(true)
           }}
-          className="inline-flex items-center gap-2 rounded-xl border border-purple-700/40 bg-white/[0.02] px-5 py-3 text-sm font-medium text-white transition hover:bg-purple-500/10"
         >
           {editMode ? <X size={16} /> : <Edit3 size={16} />}
-          {editMode ? "Cancel editing" : "Edit profile"}
-        </button>
+          {editMode ? "Cancel" : "Edit"}
+        </Button>
       </div>
 
-      <section className="overflow-hidden rounded-[28px] border border-purple-900/30 bg-[#0B0518]/95 shadow-[0_24px_80px_rgba(0,0,0,0.35)]">
-        <div className="border-b border-white/5 bg-[radial-gradient(circle_at_top_left,rgba(168,85,247,0.2),transparent_38%),linear-gradient(135deg,rgba(19,10,36,0.95),rgba(11,5,24,0.95))] p-8">
+      <section className="card-ui relative !overflow-hidden !border-white/10 !bg-[linear-gradient(180deg,rgba(20,14,34,0.98),rgba(16,11,28,0.96))] !p-0 shadow-[0_28px_72px_rgba(9,3,18,0.34)]">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-[radial-gradient(circle_at_top_left,rgba(168,85,247,0.18),transparent_42%),radial-gradient(circle_at_top_right,rgba(217,70,239,0.12),transparent_34%)]" />
+
+        <div className="relative border-b border-white/10 px-8 py-8">
           <div className="flex flex-col gap-6 md:flex-row md:items-center">
-            <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-white/5 text-4xl font-semibold text-purple-200 ring-1 ring-white/10">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full border border-fuchsia-300/20 bg-[linear-gradient(135deg,rgba(139,92,246,0.34),rgba(217,70,239,0.22))] text-3xl font-semibold text-white shadow-[0_18px_42px_rgba(168,85,247,0.24)]">
               {user.name.charAt(0).toUpperCase()}
             </div>
 
-            <div className="flex-1">
-              <h2 className="text-3xl font-semibold uppercase tracking-tight text-white">{user.name}</h2>
-              <p className="mt-2 text-sm text-gray-300">{user.email}</p>
-              <div className="mt-4 flex flex-wrap gap-3">
-                <span className="inline-flex rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-medium text-cyan-100">
-                  Role: {user.role}
-                </span>
-                <span className="inline-flex rounded-full border border-purple-400/20 bg-purple-400/10 px-3 py-1 text-xs font-medium text-purple-100">
-                  Skill: {formatLabel(profile.skillLevel)}
-                </span>
+            <div>
+              <h2 className="app-gradient-text text-2xl font-semibold">{user.name}</h2>
+              <p className="mt-1 text-sm text-fuchsia-50/72">{user.email}</p>
+              <div className="mt-3 inline-flex rounded-full border border-fuchsia-300/16 bg-[linear-gradient(135deg,rgba(139,92,246,0.18),rgba(217,70,239,0.1))] px-3 py-1 text-xs text-fuchsia-100 shadow-[0_14px_28px_rgba(168,85,247,0.12)]">
+                Role: {user.role}
               </div>
             </div>
           </div>
         </div>
 
-        <div className="p-8">
+        <div className="relative p-8">
           {!editMode ? (
             <>
               <div className="grid gap-4 md:grid-cols-2">
-                <InfoCard icon={<User size={16} />} label="Name" value={user.name} />
-                <InfoCard icon={<Mail size={16} />} label="Email" value={user.email} />
-                <InfoCard icon={<ShieldCheck size={16} />} label="Skill level" value={formatLabel(profile.skillLevel)} />
-                <InfoCard icon={<Target size={16} />} label="Goal" value={profile.goal || "Not set"} />
+                <DetailCard
+                  label="Name"
+                  value={user.name}
+                  accentClassName="from-violet-400 via-purple-400 to-fuchsia-400"
+                />
+                <DetailCard
+                  label="Email"
+                  value={user.email}
+                  accentClassName="from-fuchsia-400 via-purple-400 to-violet-300"
+                />
+                <DetailCard
+                  label="Skill level"
+                  value={formatLabel(profile.skillLevel)}
+                  accentClassName="from-purple-400 via-violet-400 to-fuchsia-300"
+                />
+                <DetailCard
+                  label="Goal"
+                  value={profile.goal || "Not set"}
+                  accentClassName="from-fuchsia-500 via-violet-400 to-purple-300"
+                />
               </div>
 
-              <div className="mt-6 rounded-2xl border border-white/5 bg-white/[0.03] p-6">
-                <p className="text-sm font-medium text-gray-300">Interests</p>
-                <div className="mt-4 flex flex-wrap gap-3">
+              <div className="mt-6 rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(25,14,43,0.94),rgba(18,11,32,0.94))] p-5 shadow-[0_18px_44px_rgba(9,3,18,0.24)] transition-all duration-300 hover:border-fuchsia-400/20 hover:shadow-[0_22px_54px_rgba(168,85,247,0.18)]">
+                <div className="h-1.5 w-14 rounded-full bg-gradient-to-r from-violet-400 via-fuchsia-400 to-purple-300" />
+                <p className="mt-4 text-sm tracking-[0.02em] text-fuchsia-100/72">Interests</p>
+                <div className="mt-3 flex flex-wrap gap-3">
                   {profile.interests.length > 0 ? (
                     profile.interests.map((interest) => (
                       <span
                         key={interest}
-                        className="rounded-full border border-purple-500/20 bg-purple-500/10 px-4 py-2 text-sm font-medium text-purple-100"
+                        className="rounded-full border border-fuchsia-300/14 bg-[linear-gradient(135deg,rgba(139,92,246,0.18),rgba(217,70,239,0.12))] px-4 py-2 text-sm text-fuchsia-50 transition-all duration-300 hover:-translate-y-0.5 hover:border-fuchsia-300/28 hover:shadow-[0_14px_28px_rgba(168,85,247,0.16)]"
                       >
                         {interest}
                       </span>
                     ))
                   ) : (
-                    <span className="text-sm text-gray-400">No interests added yet.</span>
+                    <span className="text-sm text-fuchsia-50/60">No interests added yet.</span>
                   )}
                 </div>
               </div>
             </>
           ) : (
-            <div className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="rounded-2xl border border-white/5 bg-white/[0.03] p-5">
-                  <div className="flex items-center gap-2 text-sm text-gray-400">
-                    <User size={16} />
-                    Name
-                  </div>
-                  <input
-                    value={accountForm.name}
-                    onChange={(event) =>
-                      setAccountForm((current) => ({ ...current, name: event.target.value }))
-                    }
-                    className="input-ui mt-4"
-                    placeholder="Full name"
-                  />
-                </label>
-
-                <label className="rounded-2xl border border-white/5 bg-white/[0.03] p-5">
-                  <div className="flex items-center gap-2 text-sm text-gray-400">
-                    <Mail size={16} />
-                    Email
-                  </div>
-                  <input
-                    value={accountForm.email}
-                    className="input-ui mt-4 cursor-not-allowed opacity-60"
-                    placeholder="Email address"
-                    type="email"
-                    disabled
-                    readOnly
-                  />
-                  <p className="mt-2 text-xs text-gray-500">
-                    Email is managed by your auth account and cannot be edited here.
-                  </p>
-                </label>
-
-                <label className="rounded-2xl border border-white/5 bg-white/[0.03] p-5">
-                  <div className="flex items-center gap-2 text-sm text-gray-400">
-                    <ShieldCheck size={16} />
-                    Skill level
-                  </div>
-                  <select
-                    value={profileForm.skillLevel}
-                    onChange={(event) =>
-                      setProfileForm((current) => ({ ...current, skillLevel: event.target.value }))
-                    }
-                    className="input-ui mt-4"
-                  >
-                    <option value="beginner">Beginner</option>
-                    <option value="intermediate">Intermediate</option>
-                    <option value="advanced">Advanced</option>
-                  </select>
-                </label>
-
-                <label className="rounded-2xl border border-white/5 bg-white/[0.03] p-5">
-                  <div className="flex items-center gap-2 text-sm text-gray-400">
-                    <Target size={16} />
-                    Goal
-                  </div>
-                  <input
-                    value={profileForm.goal}
-                    onChange={(event) =>
-                      setProfileForm((current) => ({ ...current, goal: event.target.value }))
-                    }
-                    className="input-ui mt-4"
-                    placeholder="Your learning goal"
-                  />
-                </label>
-              </div>
-
-              <label className="block rounded-2xl border border-white/5 bg-white/[0.03] p-5">
-                <div className="text-sm font-medium text-gray-300">Interests</div>
-                <p className="mt-2 text-xs text-gray-500">Separate multiple interests with commas.</p>
-                <input
-                  value={profileForm.interests}
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className={editorFieldClassName}>
+                <span className="flex items-center gap-2 text-sm text-fuchsia-50/78">
+                  <User size={16} />
+                  Full name
+                </span>
+                <Input
+                  value={accountForm.name}
                   onChange={(event) =>
-                    setProfileForm((current) => ({ ...current, interests: event.target.value }))
+                    setAccountForm((current) => ({ ...current, name: event.target.value }))
                   }
-                  className="input-ui mt-4"
-                  placeholder="DSA, Web Development, DBMS"
                 />
               </label>
 
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <button
-                  type="button"
-                  onClick={() => void handleSaveProfile()}
-                  disabled={saving}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-500 to-cyan-400 px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <Save size={16} />
-                  {saving ? "Saving..." : "Save changes"}
-                </button>
+              <label className={editorFieldClassName}>
+                <span className="flex items-center gap-2 text-sm text-fuchsia-50/78">
+                  <Mail size={16} />
+                  Email
+                </span>
+                <Input
+                  value={accountForm.email}
+                  disabled
+                  readOnly
+                  className="cursor-not-allowed opacity-60"
+                />
+              </label>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (user && profile) {
-                      hydrateForms(user, profile)
-                    }
-                    setEditMode(false)
-                  }}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.02] px-5 py-3 text-sm font-medium text-white transition hover:bg-white/[0.05]"
+              <label className={editorFieldClassName}>
+                <span className="flex items-center gap-2 text-sm text-fuchsia-50/78">
+                  <ShieldCheck size={16} />
+                  Skill level
+                </span>
+                <select
+                  value={profileForm.skillLevel}
+                  onChange={(event) =>
+                    setProfileForm((current) => ({ ...current, skillLevel: event.target.value }))
+                  }
+                  className="input-ui"
                 >
-                  <Check size={16} />
-                  Keep current values
-                </button>
-              </div>
+                  <option value="beginner">Beginner</option>
+                  <option value="intermediate">Intermediate</option>
+                  <option value="advanced">Advanced</option>
+                </select>
+              </label>
+
+              <label className={editorFieldClassName}>
+                <span className="flex items-center gap-2 text-sm text-fuchsia-50/78">
+                  <Target size={16} />
+                  Goal
+                </span>
+                <Input
+                  value={profileForm.goal}
+                  onChange={(event) =>
+                    setProfileForm((current) => ({ ...current, goal: event.target.value }))
+                  }
+                  placeholder="Your learning goal"
+                />
+              </label>
+
+              <label className={cn(editorFieldClassName, "md:col-span-2")}>
+                <span className="text-sm text-fuchsia-50/78">Interests</span>
+                <Input
+                  value={profileForm.interests}
+                  onChange={(event) =>
+                    setProfileForm((current) => ({
+                      ...current,
+                      interests: event.target.value,
+                    }))
+                  }
+                  placeholder="DSA, Web Development, DBMS"
+                />
+                <p className="text-xs text-fuchsia-50/58">
+                  Separate multiple interests with commas.
+                </p>
+              </label>
             </div>
           )}
         </div>
       </section>
 
+      {editMode ? (
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <Button type="button" onClick={() => void handleSaveProfile()} disabled={saving}>
+            <Save size={16} />
+            {saving ? "Saving..." : "Save changes"}
+          </Button>
+
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              if (user && profile) {
+                hydrateForms(user, profile)
+              }
+              setEditMode(false)
+            }}
+          >
+            Keep current values
+          </Button>
+        </div>
+      ) : null}
+
       {resetStatus ? (
         <div
           className={`rounded-2xl border px-5 py-4 text-sm ${
             resetStatusType === "success"
-              ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-100"
-              : "border-red-500/25 bg-red-500/10 text-red-100"
+              ? "border-purple-500/20 bg-purple-500/10 text-purple-100"
+              : "border-red-500/20 bg-red-500/10 text-red-100"
           }`}
         >
           {resetStatus}
@@ -445,24 +430,15 @@ export default function ProfilePage() {
       ) : null}
 
       <div className="flex flex-col gap-3 sm:flex-row">
-        <button
-          type="button"
-          onClick={() => void handleResetPassword()}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-500/20 bg-cyan-500/10 px-5 py-3 text-sm font-medium text-cyan-100 transition hover:bg-cyan-500/15"
-        >
+        <Button type="button" variant="secondary" onClick={() => void handleResetPassword()}>
           <ShieldCheck size={16} />
           Send Password Reset Email
-          <ArrowRight size={16} />
-        </button>
+        </Button>
 
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-red-500"
-        >
+        <Button type="button" variant="danger" onClick={handleLogout}>
           <LogOut size={16} />
           Logout
-        </button>
+        </Button>
       </div>
     </div>
   )

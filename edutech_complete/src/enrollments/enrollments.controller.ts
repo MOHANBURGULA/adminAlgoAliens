@@ -1,13 +1,16 @@
-import { Controller, Post, Get, Put, Delete, Body, Param, UseGuards, Req } from '@nestjs/common'
-import { EnrollmentsService } from './enrollments.service'
+import { Body, Controller, Delete, Get, Param, Post, Put, Req, UseGuards } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
+import { RedisRateLimit } from '../redis/redis-rate-limit.decorator'
+import { RedisRateLimitGuard } from '../redis/redis-rate-limit.guard'
+import { EnrollmentsService } from './enrollments.service'
 
 @Controller('api/enroll')
 @UseGuards(JwtAuthGuard)
 export class EnrollmentsController {
-
   constructor(private enrollmentsService: EnrollmentsService) {}
 
+  @UseGuards(RedisRateLimitGuard)
+  @RedisRateLimit({ keyPrefix: 'enrollments:create', limit: 10, windowSeconds: 60 })
   @Post()
   enroll(@Req() req: any, @Body() body: any) {
     return this.enrollmentsService.enroll(req.user.id, body.courseId)
@@ -23,10 +26,8 @@ export class EnrollmentsController {
     return this.enrollmentsService.updateProgress(Number(id), body.progress)
   }
 
-  // DELETE /api/enroll/:id — unenroll from a course
   @Delete(':id')
   unenroll(@Req() req: any, @Param('id') id: string) {
     return this.enrollmentsService.unenroll(req.user.id, Number(id))
   }
-
 }

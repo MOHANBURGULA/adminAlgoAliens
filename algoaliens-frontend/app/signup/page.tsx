@@ -5,8 +5,14 @@ import { signIn, signOut } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import toast from "react-hot-toast"
-import { clearAllSessions, clearAuthSession, resolvePostAuthRoute, storeAuthSession } from "@/lib/auth"
-import { apiClient, getLastApiErrorMessage } from "@/lib/api-client"
+import { Loader2 } from "lucide-react"
+import {
+  clearAllSessions,
+  clearAuthSession,
+  resolvePostAuthRoute,
+  storeAuthSession,
+} from "@/lib/auth"
+import { apiClient } from "@/lib/api-client"
 import { getApiErrorMessage } from "@/lib/http"
 
 type AuthResponse = {
@@ -45,24 +51,12 @@ export default function SignupPage() {
     }
   }
 
-  const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
+  const handleSignup = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
     setErrorMessage("")
 
     if (!name || !email || !password || !confirmPassword) {
       toast.error("Please fill all fields")
-      return
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-
-    if (!emailRegex.test(email)) {
-      toast.error("Enter a valid email")
-      return
-    }
-
-    if (password.length < 6) {
-      toast.error("Password must be at least 6 characters")
       return
     }
 
@@ -72,7 +66,7 @@ export default function SignupPage() {
     }
 
     if (!acceptedTerms) {
-      toast.error("Please accept Terms and Privacy Policy")
+      toast.error("Please accept Terms")
       return
     }
 
@@ -86,27 +80,13 @@ export default function SignupPage() {
         password,
       })
 
-      if (!data) {
-        throw new Error(getLastApiErrorMessage() || "Signup failed")
+      if (!data || !data.token || !data.user) {
+        throw new Error("Signup failed")
       }
 
-      const token = data.token
-
-      console.debug("[auth] signup response", {
-        hasToken: Boolean(token),
-        userId: data.user?.id,
-        role: data.user?.role || "student",
-      })
-
-      if (!token || !data.user) {
-        throw new Error("Invalid response from server")
-      }
-
-      storeAuthSession(token, data.user)
-      const nextRoute = resolvePostAuthRoute(data.user)
-
+      storeAuthSession(data.token, data.user)
+      router.replace(resolvePostAuthRoute(data.user))
       toast.success("Account created successfully!")
-      router.replace(nextRoute)
     } catch (error: unknown) {
       clearAuthSession()
       const message = getApiErrorMessage(error, "Signup failed")
@@ -114,113 +94,131 @@ export default function SignupPage() {
       toast.error(message)
     } finally {
       setSubmitting(false)
+      setGoogleLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex bg-[#0A0A0F]">
-      <div className="hidden lg:flex w-1/2 items-center justify-center bg-gradient-to-br from-purple-800 via-indigo-900 to-[#0A0A0F] text-white">
-        <div className="max-w-md px-12">
-          <h1 className="text-4xl font-bold mb-4">Start your journey</h1>
-          <p className="text-purple-200">
-            Join developers and earn trusted certificates.
-          </p>
+    <div className="flex min-h-screen items-center justify-center px-4 py-10">
+      <div className="w-full max-w-md rounded-2xl border border-purple-500/15 bg-[rgba(18,9,42,0.94)] p-8 shadow-lg shadow-black/30">
+        <div className="mb-8">
+          <h1 className="text-3xl font-semibold text-purple-300">Create an account</h1>
+          <p className="mt-2 text-gray-400">Get started with AlgoAliens for free</p>
         </div>
-      </div>
 
-      <div className="flex w-full lg:w-1/2 items-center justify-center px-6 py-16 bg-gradient-to-br from-[#0A0A0F] to-[#1A0F2E]">
-        <form onSubmit={handleSignup} className="w-full max-w-md">
-          <h2 className="text-3xl font-bold mb-2 text-purple-400">
-            Create an account
-          </h2>
-
-          <p className="text-gray-400 mb-6">
-            Get started with AlgoAliens
-          </p>
-
-          <button
-            type="button"
-            onClick={() => void handleGoogleSignup()}
-            disabled={googleLoading || submitting}
-            className="w-full mb-6 py-3.5 rounded-xl border border-purple-700 hover:bg-purple-900/50 flex items-center justify-center gap-3 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <svg className="w-5 h-5" viewBox="0 0 24 24">
+        <button
+          type="button"
+          onClick={() => void handleGoogleSignup()}
+          disabled={googleLoading || submitting}
+          className="flex w-full items-center justify-center gap-3 rounded-xl border border-purple-500/25 px-4 py-3 text-white transition-all duration-300 hover:scale-[1.02] hover:bg-purple-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {googleLoading ? (
+            <Loader2 className="animate-spin" size={18} />
+          ) : (
+            <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
               <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
               <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
               <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
               <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
             </svg>
+          )}
+          <span>{googleLoading ? "Opening..." : "Continue with Google"}</span>
+        </button>
 
-            {googleLoading ? "Opening Google..." : "Continue with Google"}
-          </button>
+        <div className="my-6 flex items-center gap-4">
+          <div className="h-px flex-1 bg-purple-500/15" />
+          <span className="text-xs uppercase tracking-[0.18em] text-purple-200/70">or</span>
+          <div className="h-px flex-1 bg-purple-500/15" />
+        </div>
 
-          <div className="text-center text-gray-500 my-4">OR</div>
+        <form onSubmit={handleSignup} className="space-y-4">
+          <div>
+            <label className="mb-2 block text-sm text-purple-100">Full Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              className="input-ui"
+              placeholder="John Doe"
+              disabled={submitting}
+            />
+          </div>
 
-          <input
-            type="text"
-            placeholder="Full Name"
-            className="w-full mb-3 p-3 rounded bg-[#1A0F2E]"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            disabled={submitting}
-          />
+          <div>
+            <label className="mb-2 block text-sm text-purple-100">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              className="input-ui"
+              placeholder="hello@example.com"
+              disabled={submitting}
+            />
+          </div>
 
-          <input
-            type="email"
-            placeholder="Email"
-            className="w-full mb-3 p-3 rounded bg-[#1A0F2E]"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            disabled={submitting}
-          />
+          <div>
+            <label className="mb-2 block text-sm text-purple-100">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              className="input-ui"
+              placeholder="Minimum 6 characters"
+              disabled={submitting}
+            />
+          </div>
 
-          <input
-            type="password"
-            placeholder="Password"
-            className="w-full mb-3 p-3 rounded bg-[#1A0F2E]"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            disabled={submitting}
-          />
+          <div>
+            <label className="mb-2 block text-sm text-purple-100">Confirm Password</label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              className="input-ui"
+              placeholder="Confirm password"
+              disabled={submitting}
+            />
+          </div>
 
-          <input
-            type="password"
-            placeholder="Confirm Password"
-            className="w-full mb-3 p-3 rounded bg-[#1A0F2E]"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            disabled={submitting}
-          />
-
-          <div className="flex items-center gap-2 mb-4 text-sm">
+          <label className="flex items-center gap-3 text-sm text-gray-400">
             <input
               type="checkbox"
               checked={acceptedTerms}
-              onChange={(e) => setAcceptedTerms(e.target.checked)}
+              onChange={(event) => setAcceptedTerms(event.target.checked)}
+              className="h-4 w-4 rounded border border-purple-500/30 bg-transparent accent-purple-600"
               disabled={submitting}
             />
-            <span>I agree to Terms</span>
-          </div>
+            <span>I agree to the Terms and Privacy Policy</span>
+          </label>
 
           {errorMessage ? (
-            <p className="mb-4 text-sm text-red-300">{errorMessage}</p>
+            <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+              {errorMessage}
+            </div>
           ) : null}
 
           <button
             type="submit"
             disabled={submitting || googleLoading}
-            className="w-full py-3 bg-purple-500 rounded disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-600 px-4 py-3 font-medium text-white shadow-md shadow-fuchsia-950/20 transition-all duration-300 hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {submitting ? "Creating account..." : "Create Account"}
+            {submitting ? (
+              <>
+                <Loader2 className="animate-spin" size={18} />
+                Creating account...
+              </>
+            ) : (
+              "Create Account"
+            )}
           </button>
-
-          <p className="text-sm text-center mt-4">
-            Already have an account?{" "}
-            <Link href="/signin" className="text-purple-400">
-              Sign in
-            </Link>
-          </p>
         </form>
+
+        <p className="mt-6 text-center text-sm text-gray-400">
+          Already have an account?{" "}
+          <Link href="/signin" className="text-purple-300 hover:text-white">
+            Sign in
+          </Link>
+        </p>
       </div>
     </div>
   )

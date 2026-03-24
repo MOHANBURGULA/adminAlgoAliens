@@ -62,16 +62,23 @@ export default function CertificatesPage() {
           setCertificates(certificateData)
           setCourseTitles(nextCourseTitles)
         }
-      } catch (loadError: any) {
+      } catch (loadError: unknown) {
         if (!cancelled) {
-          if (loadError?.response?.status === 404) {
+          const responseError = loadError as {
+            response?: {
+              status?: number
+              data?: { message?: string }
+            }
+          }
+
+          if (responseError?.response?.status === 404) {
             setCertificates([])
             setCourseTitles({})
             return
           }
 
           setError(
-            loadError?.response?.data?.message || "Unable to load certificates.",
+            responseError?.response?.data?.message || "Unable to load certificates.",
           )
         }
       } finally {
@@ -99,7 +106,7 @@ export default function CertificatesPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center text-gray-300">
+      <div className="card-ui flex min-h-[50vh] items-center justify-center text-gray-300">
         Loading certificates...
       </div>
     )
@@ -115,7 +122,7 @@ export default function CertificatesPage() {
 
   if (certificates.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-purple-900/40 bg-[#0B0518] p-8 text-center text-gray-400">
+      <div className="card-ui text-center text-gray-400">
         You have not earned any certificates yet.
       </div>
     )
@@ -131,7 +138,7 @@ export default function CertificatesPage() {
       </div>
 
       <div className="grid gap-5 md:grid-cols-3">
-        <div className="rounded-2xl border border-purple-900/30 bg-[#0B0518] p-6 text-center">
+        <div className="card-ui text-center">
           <Award className="mx-auto text-purple-300" size={22} />
           <p className="mt-4 text-3xl font-semibold text-white">
             {certificates.length}
@@ -139,16 +146,16 @@ export default function CertificatesPage() {
           <p className="mt-1 text-sm text-gray-400">Certificates earned</p>
         </div>
 
-        <div className="rounded-2xl border border-purple-900/30 bg-[#0B0518] p-6 text-center">
-          <Medal className="mx-auto text-cyan-300" size={22} />
+        <div className="card-ui text-center">
+          <Medal className="mx-auto text-violet-200" size={22} />
           <p className="mt-4 text-3xl font-semibold text-white">
             {averageScore}
           </p>
           <p className="mt-1 text-sm text-gray-400">Average score</p>
         </div>
 
-        <div className="rounded-2xl border border-purple-900/30 bg-[#0B0518] p-6 text-center">
-          <CalendarDays className="mx-auto text-pink-300" size={22} />
+        <div className="card-ui text-center">
+          <CalendarDays className="mx-auto text-fuchsia-200" size={22} />
           <p className="mt-4 text-lg font-semibold text-white">
             {formatDate(certificates[0].issuedAt)}
           </p>
@@ -160,7 +167,7 @@ export default function CertificatesPage() {
         {certificates.map((certificate) => (
           <div
             key={certificate.id}
-            className="rounded-2xl border border-purple-900/30 bg-[#0B0518] p-6"
+            className="card-ui"
           >
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -170,18 +177,18 @@ export default function CertificatesPage() {
                 </h2>
               </div>
 
-              <span className="rounded-full bg-green-500/15 px-3 py-1 text-xs text-green-200">
+              <span className="rounded-full bg-purple-500/12 px-3 py-1 text-xs text-purple-100">
                 Score {certificate.score}
               </span>
             </div>
 
             <div className="mt-5 grid gap-3 text-sm text-gray-300 sm:grid-cols-2">
-              <div className="rounded-xl bg-[#12092A] p-4">
+              <div className="rounded-xl bg-[rgba(18,9,42,0.9)] p-4">
                 <p className="text-gray-400">Course ID</p>
                 <p className="mt-2 text-white">{certificate.courseId}</p>
               </div>
 
-              <div className="rounded-xl bg-[#12092A] p-4">
+              <div className="rounded-xl bg-[rgba(18,9,42,0.9)] p-4">
                 <p className="text-gray-400">Issued</p>
                 <p className="mt-2 text-white">{formatDate(certificate.issuedAt)}</p>
               </div>
@@ -196,7 +203,7 @@ export default function CertificatesPage() {
                   "noopener,noreferrer",
                 )
               }
-              className="mt-5 inline-flex items-center gap-2 rounded-lg border border-purple-700/40 px-4 py-2 text-sm text-white hover:bg-purple-500/10"
+              className="mt-5 inline-flex items-center gap-2 rounded-xl border border-purple-500/25 px-4 py-2 text-sm text-white transition-all duration-300 hover:scale-[1.02] hover:bg-purple-500/10"
             >
               View Certificate
               <ExternalLink size={15} />

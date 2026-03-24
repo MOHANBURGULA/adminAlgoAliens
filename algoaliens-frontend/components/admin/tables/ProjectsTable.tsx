@@ -63,7 +63,7 @@ export default function ProjectsTable({
           href={project.githubLink}
           target="_blank"
           rel="noreferrer"
-          className="inline-block max-w-xs truncate text-cyan-300 transition hover:text-white"
+          className="inline-block max-w-xs truncate text-indigo-300 transition hover:text-white"
           title={project.githubLink}
         >
           {formatGithubLink(project.githubLink)}
@@ -183,7 +183,7 @@ export default function ProjectsTable({
               href={project.githubLink}
               target="_blank"
               rel="noreferrer"
-              className="mt-4 inline-block text-sm text-cyan-300 transition hover:text-white"
+              className="mt-4 inline-block text-sm text-indigo-300 transition hover:text-white"
             >
               {formatGithubLink(project.githubLink)}
             </a>

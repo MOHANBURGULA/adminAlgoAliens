@@ -19,6 +19,7 @@ import {
   Trophy,
   UploadCloud,
 } from "lucide-react"
+import ProgressBar from "@/components/dashboard/ProgressBar"
 import { LeaveCourseModal } from "@/components/courses/LeaveCourseModal"
 import { isAuthenticated } from "@/lib/auth"
 import { getApiErrorMessage, isAxiosStatus } from "@/lib/http"
@@ -67,7 +68,7 @@ type StageDocuments = {
 }
 
 type StatusTone =
-  | "blue"
+  | "indigo"
   | "emerald"
   | "orange"
   | "purple"
@@ -89,7 +90,7 @@ function statusTone(tone: StatusTone) {
   if (tone === "orange") return "border-orange-500/20 bg-orange-500/10 text-orange-100"
   if (tone === "yellow") return "border-yellow-500/20 bg-yellow-500/10 text-yellow-100"
   if (tone === "red") return "border-red-500/20 bg-red-500/10 text-red-100"
-  if (tone === "blue") return "border-cyan-500/20 bg-cyan-500/10 text-cyan-100"
+  if (tone === "indigo") return "border-indigo-500/20 bg-indigo-500/10 text-indigo-100"
   if (tone === "purple") return "border-purple-500/20 bg-purple-500/10 text-purple-100"
   return "border-white/10 bg-white/[0.03] text-gray-200"
 }
@@ -139,7 +140,7 @@ function StageRow({
   return (
     <div className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-[#12092A]/70 p-4 lg:flex-row lg:items-center lg:justify-between">
       <div className="flex items-start gap-3">
-        <div className="mt-1 flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-[#1A0F32] text-cyan-200">
+        <div className="mt-1 flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-[#1A0F32] text-indigo-200">
           <Icon size={18} />
         </div>
         <div>
@@ -161,7 +162,7 @@ function StageRow({
           className={`${actionClassName} ${
             actionDisabled
               ? "pointer-events-none border border-white/10 bg-white/[0.03] text-gray-500"
-              : "bg-gradient-to-r from-purple-500 to-cyan-400 text-white"
+              : "bg-gradient-to-r from-purple-600 to-indigo-700 text-white"
           }`}
         >
           {actionLabel}
@@ -174,7 +175,7 @@ function StageRow({
           className={`${actionClassName} ${
             actionDisabled
               ? "cursor-not-allowed border border-white/10 bg-white/[0.03] text-gray-500"
-              : "bg-gradient-to-r from-purple-500 to-cyan-400 text-white"
+              : "bg-gradient-to-r from-purple-600 to-indigo-700 text-white"
           }`}
         >
           {actionLabel}
@@ -712,7 +713,7 @@ export default function CoursePage() {
                 type="button"
                 onClick={() => void handleEnroll()}
                 disabled={enrolling}
-                className="rounded-2xl bg-gradient-to-r from-purple-500 to-cyan-400 px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-700 px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {enrolling ? "Enrolling..." : "Enroll Now"}
               </button>
@@ -731,7 +732,7 @@ export default function CoursePage() {
                 {formatDifficulty(course.difficulty)}
               </span>
               <h1 className="mt-5 flex items-center gap-3 text-3xl font-semibold text-white sm:text-4xl">
-                <BookOpen className="text-cyan-300" size={22} />
+                <BookOpen className="text-indigo-300" size={22} />
                 {course.title}
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-7 text-gray-300">
@@ -742,22 +743,13 @@ export default function CoursePage() {
 
               <div className="mt-6 flex flex-wrap gap-3">
                 <StageBadge label={`${mainModules.length} learning modules`} tone="purple" />
-                <StageBadge label="Final evaluation included" tone="blue" />
+                <StageBadge label="Final evaluation included" tone="indigo" />
                 {!enrollment ? <StageBadge label="Preview mode" tone="orange" /> : null}
               </div>
             </div>
 
             <div className="w-full max-w-sm rounded-[28px] border border-white/10 bg-[#12092A]/90 p-6">
-              <div className="flex items-center justify-between text-sm text-gray-300">
-                <span>Course progress</span>
-                <span>{displayedProgress}%</span>
-              </div>
-              <div className="mt-3 h-3 rounded-full bg-[#1B1238]">
-                <div
-                  className="h-3 rounded-full bg-gradient-to-r from-purple-500 to-cyan-400"
-                  style={{ width: `${displayedProgress}%` }}
-                />
-              </div>
+              <ProgressBar value={displayedProgress} label="Course progress" />
 
               <div className="mt-5 grid gap-3 sm:grid-cols-3">
                 <div className="rounded-2xl border border-white/10 bg-[#0B0518] p-4">
@@ -787,7 +779,7 @@ export default function CoursePage() {
               </div>
 
               {enrollment && enrollment.progress !== calculatedProgress ? (
-                <p className="mt-4 text-xs text-cyan-200">
+                <p className="mt-4 text-xs text-indigo-200">
                   Syncing updated progress to your enrollment record...
                 </p>
               ) : null}
@@ -827,7 +819,7 @@ export default function CoursePage() {
                   className="flex w-full items-center justify-between gap-4 px-5 py-5 text-left"
                 >
                   <div className="flex items-start gap-4">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-[#1A0F32] text-sm font-semibold text-cyan-100">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-[#1A0F32] text-sm font-semibold text-indigo-100">
                       {module.orderIndex}
                     </div>
 
@@ -855,7 +847,7 @@ export default function CoursePage() {
                               ? hasPassedEvaluation
                                 ? "emerald"
                                 : hasVideoSubmission || latestProject || finalQuizPassed
-                                  ? "blue"
+                                  ? "indigo"
                                   : isUnlocked
                                     ? "purple"
                                     : "slate"
@@ -990,7 +982,7 @@ export default function CoursePage() {
                               : hasVideoSubmission
                                 ? "yellow"
                                 : finalQuizPassed
-                                  ? "blue"
+                                  ? "indigo"
                                   : "slate"
                           }
                           description={
@@ -1075,7 +1067,7 @@ export default function CoursePage() {
                               type="button"
                               onClick={() => void handleFinalQuizSubmit()}
                               disabled={finalQuestions.length === 0 || submittingFinalQuizState}
-                              className="rounded-2xl bg-gradient-to-r from-purple-500 to-cyan-400 px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                              className="rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-700 px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
                             >
                               {submittingFinalQuizState
                                 ? "Submitting..."
@@ -1137,7 +1129,7 @@ export default function CoursePage() {
                           actionHref={stageDocuments.explanation?.fileUrl}
                           actionLabel={isCompleted ? "Review" : "Continue"}
                           badgeLabel={isCompleted ? "Completed" : "In Progress"}
-                          badgeTone={isCompleted ? "emerald" : "blue"}
+                          badgeTone={isCompleted ? "emerald" : "indigo"}
                           description={
                             stageDocuments.explanation?.title ||
                             "Review the explanation resource for this module."
@@ -1220,7 +1212,7 @@ export default function CoursePage() {
                                 moduleQuestions.length === 0 ||
                                 submittingModuleId === module.id
                               }
-                              className="rounded-2xl bg-gradient-to-r from-purple-500 to-cyan-400 px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                              className="rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-700 px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
                             >
                               {submittingModuleId === module.id
                                 ? "Submitting..."
@@ -1290,7 +1282,7 @@ export default function CoursePage() {
           <div className="mt-5 grid gap-4 lg:grid-cols-2">
             <div className="rounded-2xl border border-white/10 bg-[#12092A] p-5">
               <div className="flex items-center gap-3">
-                <FileText className="text-cyan-300" size={18} />
+                <FileText className="text-indigo-300" size={18} />
                 <h3 className="font-semibold text-white">Latest Project</h3>
               </div>
               <p className="mt-4 text-sm leading-6 text-gray-300">

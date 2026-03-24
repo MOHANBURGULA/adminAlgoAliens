@@ -18,10 +18,12 @@ import { AdminModule } from './admin/admin.module'
 import { DashboardModule } from './dashboard/dashboard.module'
 import { LeaderboardModule } from './leaderboard/leaderboard.module'
 import { MailModule } from './mail/mail.module'
+import { RedisModule } from './redis/redis.module'
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    RedisModule,
 
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],

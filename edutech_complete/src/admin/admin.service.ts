@@ -14,6 +14,8 @@ import { Video } from '../videos/video.entity'
 import { Course } from '../courses/course.entity'
 import { CertificatesService } from '../certificates/certificates.service'
 import { S3Service } from '../s3/s3.service'
+import { CacheKeys } from '../redis/cache.helpers'
+import { RedisService } from '../redis/redis.service'
 
 @Injectable()
 export class AdminService {
@@ -53,7 +55,8 @@ export class AdminService {
     private courseRepo: Repository<Course>,
 
     private certificatesService: CertificatesService,
-    private s3Service: S3Service
+    private s3Service: S3Service,
+    private readonly redisService: RedisService,
   ) {}
 
   // ── USER MANAGEMENT ─────────────────────────────────────────
@@ -203,33 +206,83 @@ export class AdminService {
 
   // ── MODULE MANAGEMENT ────────────────────────────────────────
 
-  createModule(data: { courseId: number; title: string; orderIndex: number }) {
+  async createModule(data: { courseId: number; title: string; orderIndex: number }) {
     const module = this.moduleRepo.create(data)
-    return this.moduleRepo.save(module)
+    const savedModule = await this.moduleRepo.save(module)
+    await this.redisService.del(CacheKeys.modulesCourse(savedModule.courseId))
+    return savedModule
   }
 
   async updateModule(id: number, data: { title?: string; orderIndex?: number }) {
+    const existingModule = await this.moduleRepo.findOne({ where: { id } })
     await this.moduleRepo.update(id, data)
-    return this.moduleRepo.findOne({ where: { id } })
+    const updatedModule = await this.moduleRepo.findOne({ where: { id } })
+
+    const courseIds = new Set<number>()
+    if (existingModule) {
+      courseIds.add(existingModule.courseId)
+    }
+    if (updatedModule) {
+      courseIds.add(updatedModule.courseId)
+    }
+
+    await this.redisService.del(
+      ...Array.from(courseIds).map((courseId) => CacheKeys.modulesCourse(courseId)),
+    )
+
+    return updatedModule
   }
 
   async deleteModule(id: number) {
+    const existingModule = await this.moduleRepo.findOne({ where: { id } })
     await this.documentRepo.delete({ moduleId: id })
-    return this.moduleRepo.delete(id)
+    const result = await this.moduleRepo.delete(id)
+
+    await this.redisService.del(
+      CacheKeys.moduleDocuments(id),
+      ...(existingModule ? [CacheKeys.moduleQuestions(existingModule.courseId, id)] : []),
+      ...(existingModule ? [CacheKeys.modulesCourse(existingModule.courseId)] : []),
+    )
+
+    return result
   }
 
-  createModuleDocument(data: { moduleId: number; label: string; title: string; fileUrl: string }) {
+  async createModuleDocument(data: { moduleId: number; label: string; title: string; fileUrl: string }) {
     const doc = this.documentRepo.create(data)
-    return this.documentRepo.save(doc)
+    const savedDocument = await this.documentRepo.save(doc)
+    await this.redisService.del(CacheKeys.moduleDocuments(savedDocument.moduleId))
+    return savedDocument
   }
 
   async updateModuleDocument(id: number, data: { label?: string; title?: string; fileUrl?: string }) {
+    const existingDocument = await this.documentRepo.findOne({ where: { id } })
     await this.documentRepo.update(id, data)
-    return this.documentRepo.findOne({ where: { id } })
+    const updatedDocument = await this.documentRepo.findOne({ where: { id } })
+
+    const moduleIds = new Set<number>()
+    if (existingDocument) {
+      moduleIds.add(existingDocument.moduleId)
+    }
+    if (updatedDocument) {
+      moduleIds.add(updatedDocument.moduleId)
+    }
+
+    await this.redisService.del(
+      ...Array.from(moduleIds).map((moduleId) => CacheKeys.moduleDocuments(moduleId)),
+    )
+
+    return updatedDocument
   }
 
-  deleteModuleDocument(id: number) {
-    return this.documentRepo.delete(id)
+  async deleteModuleDocument(id: number) {
+    const existingDocument = await this.documentRepo.findOne({ where: { id } })
+    const result = await this.documentRepo.delete(id)
+
+    if (existingDocument) {
+      await this.redisService.del(CacheKeys.moduleDocuments(existingDocument.moduleId))
+    }
+
+    return result
   }
 
   getDocumentUploadUrl(filename: string) {
@@ -238,9 +291,18 @@ export class AdminService {
 
   // ── QUESTION MANAGEMENT ──────────────────────────────────────
 
-  createQuestion(data: any) {
+  async createQuestion(data: any) {
     const question = this.questionRepo.create(data)
-    return this.questionRepo.save(question)
+    const savedQuestion = await this.questionRepo.save(question)
+    const normalizedQuestion = Array.isArray(savedQuestion) ? savedQuestion[0] : savedQuestion
+
+    await this.invalidateQuestionCaches(
+      normalizedQuestion?.courseId,
+      normalizedQuestion?.moduleId,
+      normalizedQuestion?.type,
+    )
+
+    return normalizedQuestion
   }
 
   getCourseQuestions(courseId: number) {
@@ -248,12 +310,35 @@ export class AdminService {
   }
 
   async updateQuestion(id: number, data: Partial<Question>) {
+    const existingQuestion = await this.questionRepo.findOne({ where: { id } })
     await this.questionRepo.update(id, data)
-    return this.questionRepo.findOne({ where: { id } })
+    const updatedQuestion = await this.questionRepo.findOne({ where: { id } })
+
+    await this.invalidateQuestionCaches(
+      existingQuestion?.courseId,
+      existingQuestion?.moduleId,
+      existingQuestion?.type,
+    )
+    await this.invalidateQuestionCaches(
+      updatedQuestion?.courseId,
+      updatedQuestion?.moduleId,
+      updatedQuestion?.type,
+    )
+
+    return updatedQuestion
   }
 
-  deleteQuestion(id: number) {
-    return this.questionRepo.delete(id)
+  async deleteQuestion(id: number) {
+    const existingQuestion = await this.questionRepo.findOne({ where: { id } })
+    const result = await this.questionRepo.delete(id)
+
+    await this.invalidateQuestionCaches(
+      existingQuestion?.courseId,
+      existingQuestion?.moduleId,
+      existingQuestion?.type,
+    )
+
+    return result
   }
 
   // ── COURSE MANAGEMENT ────────────────────────────────────────
@@ -270,14 +355,18 @@ export class AdminService {
     }))
   }
 
-  createCourse(data: { title: string; difficulty: string }) {
+  async createCourse(data: { title: string; difficulty: string }) {
     const course = this.courseRepo.create(data)
-    return this.courseRepo.save(course)
+    const savedCourse = await this.courseRepo.save(course)
+    await this.redisService.del(CacheKeys.coursesAll())
+    return savedCourse
   }
 
   async updateCourse(id: number, data: { title?: string; difficulty?: string }) {
     await this.courseRepo.update(id, data)
-    return this.courseRepo.findOne({ where: { id } })
+    const updatedCourse = await this.courseRepo.findOne({ where: { id } })
+    await this.invalidateCourseCaches(id)
+    return updatedCourse
   }
 
   async deleteCourse(id: number) {
@@ -311,7 +400,50 @@ export class AdminService {
 
     await this.courseRepo.remove(course)
 
+    await this.redisService.del(
+      CacheKeys.coursesAll(),
+      CacheKeys.modulesCourse(id),
+      CacheKeys.finalQuizQuestions(id),
+      ...moduleIds.map((moduleId) => CacheKeys.moduleDocuments(moduleId)),
+      ...moduleIds.map((moduleId) => CacheKeys.moduleQuestions(id, moduleId)),
+    )
+
     return { message: 'Deleted successfully' }
+  }
+
+  private async invalidateQuestionCaches(
+    courseId?: number,
+    moduleId?: number,
+    type?: string,
+  ) {
+    if (!courseId || !type) {
+      return
+    }
+
+    if (type === 'final') {
+      await this.redisService.del(CacheKeys.finalQuizQuestions(courseId))
+      return
+    }
+
+    if (typeof moduleId === 'number') {
+      await this.redisService.del(CacheKeys.moduleQuestions(courseId, moduleId))
+    }
+  }
+
+  private async invalidateCourseCaches(courseId: number) {
+    const enrollments = await this.enrollmentRepo.find({
+      where: { courseId },
+      select: ['userId'],
+    })
+
+    const userCourseKeys = Array.from(
+      new Set(enrollments.map((enrollment) => CacheKeys.coursesUser(enrollment.userId))),
+    )
+
+    await this.redisService.del(
+      CacheKeys.coursesAll(),
+      ...userCourseKeys,
+    )
   }
 
 }

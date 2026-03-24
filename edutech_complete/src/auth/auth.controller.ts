@@ -1,6 +1,10 @@
 import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common'
-import { AuthService } from './auth.service'
+import { MetricNames } from '../redis/cache.helpers'
+import { RedisMetricsService } from '../redis/redis-metrics.service'
+import { RedisRateLimit } from '../redis/redis-rate-limit.decorator'
+import { RedisRateLimitGuard } from '../redis/redis-rate-limit.guard'
 import { UsersService } from '../users/users.service'
+import { AuthService } from './auth.service'
 import { JwtAuthGuard } from './jwt-auth.guard'
 
 @Controller('api/auth')
@@ -8,6 +12,7 @@ export class AuthController {
   constructor(
     private authService: AuthService,
     private usersService: UsersService,
+    private readonly redisMetricsService: RedisMetricsService,
   ) {}
 
   private getConfiguredAdminRole(email: string) {
@@ -26,11 +31,15 @@ export class AuthController {
     return Boolean(adminEmail && email.toLowerCase() === adminEmail)
   }
 
+  @UseGuards(RedisRateLimitGuard)
+  @RedisRateLimit({ keyPrefix: 'auth:signup', limit: 10, windowSeconds: 60 })
   @Post('signup')
   signup(@Body() body: { name: string; email: string; password: string }) {
     return this.authService.signup(body)
   }
 
+  @UseGuards(RedisRateLimitGuard)
+  @RedisRateLimit({ keyPrefix: 'auth:login', limit: 10, windowSeconds: 60 })
   @Post('login')
   login(@Body() body: { email: string; password: string }) {
     return this.authService.login(body)
@@ -43,25 +52,31 @@ export class AuthController {
     }
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RedisRateLimitGuard)
+  @RedisRateLimit({ keyPrefix: 'auth:change-password', limit: 5, windowSeconds: 600 })
   @Post('change-password')
   changePassword(@Req() req: { user: { id: number } }) {
     return this.authService.changePassword(req.user.id)
   }
 
+  @UseGuards(RedisRateLimitGuard)
+  @RedisRateLimit({ keyPrefix: 'auth:reset-password', limit: 5, windowSeconds: 600 })
   @Post('reset-password')
   resetPassword(@Body() body: { token: string; newPassword: string }) {
     return this.authService.resetPassword(body.token, body.newPassword)
   }
 
+  @UseGuards(RedisRateLimitGuard)
+  @RedisRateLimit({ keyPrefix: 'auth:google', limit: 10, windowSeconds: 60 })
   @Post('google')
   async googleLogin(@Body() body: { email: string; name: string }) {
     const { email, name } = body
+    let isNewUser = false
 
     let user = await this.usersService.findByEmail(email)
 
-    // ✅ If new user → create
     if (!user) {
+      isNewUser = true
       user = await this.usersService.create({
         email,
         name,
@@ -83,8 +98,14 @@ export class AuthController {
       throw new Error('Unable to resolve authenticated user.')
     }
 
-    // ✅ Generate JWT
     const token = this.usersService.generateJwt(user)
+
+    await Promise.all([
+      this.redisMetricsService.increment(MetricNames.authLoginSuccess),
+      isNewUser
+        ? this.redisMetricsService.increment(MetricNames.signupSuccess)
+        : Promise.resolve(null),
+    ])
 
     return {
       token,

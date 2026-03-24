@@ -23,10 +23,14 @@ export default function ForgotPasswordPage() {
       setNotice(message)
       setNoticeType("success")
       toast.success(message)
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const responseError = error as {
+        response?: { data?: { message?: string } }
+        message?: string
+      }
       const message =
-        error?.response?.data?.message ||
-        error?.message ||
+        responseError?.response?.data?.message ||
+        responseError?.message ||
         "Please sign in first to request a reset link."
       setNotice(message)
       setNoticeType("error")
@@ -65,7 +69,7 @@ export default function ForgotPasswordPage() {
         <button
           type="submit"
           disabled={submitting}
-          className="w-full py-3 rounded-lg bg-gradient-to-r from-purple-500 to-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-lg bg-gradient-to-r from-purple-600 to-indigo-700 py-3 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {submitting ? "Sending..." : "Send Reset Link"}
         </button>

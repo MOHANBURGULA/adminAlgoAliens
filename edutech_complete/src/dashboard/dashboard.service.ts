@@ -5,6 +5,8 @@ import { Enrollment } from '../enrollments/enrollment.entity'
 import { ModuleProgress } from '../modules/module-progress.entity'
 import { Evaluation } from '../evaluation/evaluation.entity'
 import { Certificate } from '../certificates/certificate.entity'
+import { CACHE_TTL_SECONDS, CacheKeys } from '../redis/cache.helpers'
+import { RedisService } from '../redis/redis.service'
 
 @Injectable()
 export class DashboardService {
@@ -20,10 +22,18 @@ export class DashboardService {
     private evaluationRepo: Repository<Evaluation>,
 
     @InjectRepository(Certificate)
-    private certificateRepo: Repository<Certificate>
+    private certificateRepo: Repository<Certificate>,
+
+    private readonly redisService: RedisService,
   ) {}
 
   async getStudentDashboard(userId: number) {
+    const cacheKey = CacheKeys.dashboardUser(userId)
+    const cachedDashboard = await this.redisService.getCache(cacheKey)
+    if (cachedDashboard !== null) {
+      return cachedDashboard
+    }
+
     const [
       enrollments,
       completedModules,
@@ -40,7 +50,7 @@ export class DashboardService {
     const passedEvaluations   = evaluations.filter(e => e.status === 'passed')
     const failedEvaluations   = evaluations.filter(e => e.status === 'failed')
 
-    return {
+    const dashboard = {
       enrolledCourses:      enrollments.length,
       enrollments,
       completedModulesCount: completedModules.length,
@@ -54,6 +64,14 @@ export class DashboardService {
       certificatesEarned: certificates.length,
       certificates
     }
+
+    await this.redisService.setCache(
+      cacheKey,
+      dashboard,
+      CACHE_TTL_SECONDS.dashboardUser,
+    )
+
+    return dashboard
   }
 
 }

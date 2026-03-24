@@ -1,32 +1,74 @@
 import { Injectable } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
-import { Repository } from 'typeorm'
+import { In, Repository } from 'typeorm'
 import { Question } from './question.entity'
+import {
+  CACHE_TTL_SECONDS,
+  CacheKeys,
+  TIMER_TTL_SECONDS,
+  TimerKeys,
+} from '../redis/cache.helpers'
+import { RedisService } from '../redis/redis.service'
 
 @Injectable()
 export class QuestionsService {
 
   constructor(
     @InjectRepository(Question)
-    private repo: Repository<Question>
+    private repo: Repository<Question>,
+    private readonly redisService: RedisService,
   ) {}
 
   // Get module quiz questions — shuffle options but keep track of correct answer
   // Every user gets the same questions but in shuffled order
-  async getModuleQuestions(courseId: number, moduleId: number) {
-    const questions = await this.repo.find({ where: { courseId, moduleId, type: 'module' } })
+  async getModuleQuestions(userId: number, courseId: number, moduleId: number) {
+    const cacheKey = CacheKeys.moduleQuestions(courseId, moduleId)
+    let questions = await this.redisService.getCache<Question[]>(cacheKey)
+
+    if (questions === null) {
+      questions = await this.repo.find({ where: { courseId, moduleId, type: 'module' } })
+      await this.redisService.setCache(
+        cacheKey,
+        questions,
+        CACHE_TTL_SECONDS.moduleQuestions,
+      )
+    }
+
+    await this.redisService.setIfAbsent(
+      TimerKeys.moduleQuiz(userId, courseId, moduleId),
+      new Date().toISOString(),
+      TIMER_TTL_SECONDS.moduleQuiz,
+    )
+
     return this.shuffleQuestions(questions)
   }
 
   // Get final quiz questions for a course
-  async getFinalQuizQuestions(courseId: number) {
-    const questions = await this.repo.find({ where: { courseId, type: 'final' } })
+  async getFinalQuizQuestions(userId: number, courseId: number) {
+    const cacheKey = CacheKeys.finalQuizQuestions(courseId)
+    let questions = await this.redisService.getCache<Question[]>(cacheKey)
+
+    if (questions === null) {
+      questions = await this.repo.find({ where: { courseId, type: 'final' } })
+      await this.redisService.setCache(
+        cacheKey,
+        questions,
+        CACHE_TTL_SECONDS.finalQuizQuestions,
+      )
+    }
+
+    await this.redisService.setIfAbsent(
+      TimerKeys.finalQuiz(userId, courseId),
+      new Date().toISOString(),
+      TIMER_TTL_SECONDS.finalQuiz,
+    )
+
     return this.shuffleQuestions(questions)
   }
 
   // Get questions by IDs (used during answer evaluation)
   getQuestionsByIds(ids: number[]) {
-    return this.repo.findByIds(ids)
+    return this.repo.findBy({ id: In(ids) })
   }
 
   // Get expected answers for all final quiz questions (used for video evaluation)

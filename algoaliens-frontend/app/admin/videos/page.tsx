@@ -95,7 +95,7 @@ export default function AdminVideosPage() {
                   href={video.videoUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="mt-3 block text-sm text-cyan-300 hover:text-white"
+                  className="mt-3 block text-sm text-indigo-300 hover:text-white"
                 >
                   Open video
                 </a>

@@ -230,7 +230,7 @@ export default function AdminCourseModulesPage() {
               <article key={moduleItem.id} className="surface-card p-6">
                 <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
                   <div className="flex min-w-0 items-start gap-4">
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-slate-800 bg-[#0F172A] text-cyan-100">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-slate-800 bg-[#0F172A] text-indigo-100">
                       <div className="flex items-center gap-1">
                         <GripVertical size={15} />
                         <span className="text-base font-semibold">{moduleItem.orderIndex}</span>

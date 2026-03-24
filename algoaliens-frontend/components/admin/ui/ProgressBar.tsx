@@ -32,7 +32,7 @@ export default function ProgressBar({
       <div className={cn("h-2.5 overflow-hidden rounded-full bg-[#140A2A]", trackClassName)}>
         <div
           className={cn(
-            "h-full rounded-full bg-gradient-to-r from-cyan-400 via-purple-400 to-emerald-400 transition-[width] duration-500",
+            "h-full rounded-full bg-gradient-to-r from-purple-600 to-purple-800 transition-[width] duration-500",
             barClassName,
           )}
           style={{ width: `${percentage}%` }}

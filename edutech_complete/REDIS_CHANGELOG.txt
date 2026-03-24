@@ -1,0 +1,55 @@
+Redis implementation changelog
+Date: 2026-03-24
+
+Infrastructure
+- src/app.module.ts: imported the global Redis module so Redis services, metrics, and guards are available app-wide.
+- src/redis/cache.helpers.ts: added shared cache TTLs, including courses:user:{userId}, timer TTLs, metric TTLs, cache key helpers, timer key helpers, metric key helpers, metric names, and rate-limit key helpers.
+- src/redis/redis.module.ts: exported RedisService, RedisMetricsService, and RedisRateLimitGuard as global providers.
+- src/redis/redis.service.ts: expanded Redis helpers with graceful reconnect handling, BullMQ connection options, get/set/del/getCache/setCache/setIfAbsent/incr/expire/ttl, and safe fallback behavior when Redis is unavailable.
+- src/redis/redis.service.ts: added Redis ping support, disabled automatic reconnect storms, and throttled repeated Redis warning logs for unavailable Redis environments.
+- src/redis/redis.service.ts: added visible Cache HIT / Cache MISS / Cache SET logging, config lookup support, and safer JSON decoding for previously double-encoded cache values.
+- src/redis/redis-metrics.service.ts: added lightweight daily Redis counter support for backend flow metrics.
+- src/redis/redis-rate-limit.decorator.ts: added reusable route metadata for Redis-backed rate limits.
+- src/redis/redis-rate-limit.guard.ts: added Redis-backed rate-limit guard with HTTP 429 responses and graceful bypass when Redis is unavailable.
+
+Read-through caching and invalidation
+- src/courses/courses.service.ts: added read-through caching for GET /api/courses using key courses:all and TTL 300.
+- src/dashboard/dashboard.service.ts: added read-through caching for GET /api/dashboard using dashboard:user:{userId} and TTL 120.
+- src/enrollments/enrollments.service.ts: added read-through caching for GET /api/enroll; ensures courses:user:{userId} is created whenever user enrollments are fetched; invalidates courses:all, courses:user:{userId}, enrollments:user:{userId}, and dashboard:user:{userId} after enrollment mutations; increments enrollment metrics.
+- src/enrollments/enrollments.module.ts: registered the Course repository so enrollments can materialize user-specific course caches without changing API responses.
+- src/users/users.service.ts: added read-through caching for GET /api/users/profile and invalidation after profile create/update.
+- src/modules/modules.service.ts: added caching for course modules, module documents, and module progress; invalidates progress and dashboard caches when module completion is recorded.
+- src/questions/questions.service.ts: added caching for module/final quiz question banks, preserved shuffled response shape, and created timer keys on question fetch.
+- src/questions/questions.controller.ts: passed authenticated user IDs into question service methods so timer keys can be user-scoped.
+- src/quiz-attempts/quiz-attempts.service.ts: added caching for quiz attempt reads; invalidates attempt/timer keys after quiz submissions; records quiz metrics.
+- src/final-quiz/final-quiz.service.ts: added caching for final quiz attempt reads; invalidates attempt/timer keys after final quiz submissions; records final quiz metrics.
+- src/admin/admin.service.ts: invalidates related course/module/document/question caches on admin mutations, including course/module deletes.
+
+Rate limiting
+- src/auth/auth.controller.ts: applied Redis-backed rate limits to signup, login, google auth, change-password, and reset-password routes.
+- src/users/users.controller.ts: applied Redis-backed rate limits to google-login and added success/signup metric increments for that auth path.
+- src/enrollments/enrollments.controller.ts: applied Redis-backed rate limiting to POST /api/enroll.
+- src/quiz-attempts/quiz-attempts.controller.ts: applied Redis-backed rate limiting to module quiz submissions.
+- src/final-quiz/final-quiz.controller.ts: applied Redis-backed rate limiting to final quiz submissions.
+- src/evaluation/evaluation.controller.ts: applied Redis-backed rate limiting to evaluation submit and retry routes.
+- src/projects/projects.controller.ts: applied Redis-backed rate limiting to project submissions.
+- src/videos/videos.controller.ts: applied Redis-backed rate limiting to video submissions.
+
+Metrics
+- src/auth/auth.service.ts: records signup success, login success, and login failure metrics.
+- src/projects/projects.service.ts: records project submission metrics.
+- src/videos/videos.service.ts: records video submission metrics.
+- src/auth/auth.controller.ts: records successful Google auth logins and first-time Google account creations as signup success.
+- src/users/users.controller.ts: records successful google-login logins and first-time account creations as signup success.
+
+BullMQ and heavy evaluation processing
+- src/evaluation/evaluation.module.ts: registered evaluation queue/processor providers with the existing evaluation module.
+- src/evaluation/evaluation.service.ts: moved evaluation dispatching to BullMQ with a safe in-process fallback, invalidated dashboard cache on submission, and recorded evaluation submission metrics without changing API responses.
+- src/evaluation/video-processing.types.ts: defined the BullMQ queue name video-processing and shared job payload type.
+- src/evaluation/video-processing.queue.ts: added BullMQ queue + worker setup using Redis connection options and graceful failure handling.
+- src/evaluation/video-processing.queue.ts: BullMQ now verifies Redis before queue startup and disables itself after the first queue/worker infrastructure failure to prevent repeated warning floods.
+- src/evaluation/video-processing.queue.ts: now warns if Redis maxmemory-policy is not noeviction, which is safer for BullMQ key retention.
+- src/evaluation/video-processing.processor.ts: moved heavy video evaluation work into a dedicated processor and invalidates dashboard cache after completion/failure.
+
+Verification
+- Build verified successfully with: npm.cmd run build

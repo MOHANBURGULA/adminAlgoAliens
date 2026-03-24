@@ -1,12 +1,18 @@
 "use client"
 
-import { useMemo, useState, useEffect } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useParams } from "next/navigation"
 import { apiClient } from "@/lib/axios"
 import { getApiErrorMessage } from "@/lib/http"
 
 type Enrollment = { id: number; courseId: number; progress: number; createdAt?: string }
-type Evaluation = { id: number; courseId: number; status: string; finalScore?: number; aiDetectionScore?: number }
+type Evaluation = {
+  id: number
+  courseId: number
+  status: string
+  finalScore?: number
+  aiDetectionScore?: number
+}
 type Certificate = { id: number; courseId: number; score: number; issuedAt?: string }
 
 type UserDetails = {
@@ -21,15 +27,22 @@ type UserDetails = {
 
 export default function AdminUserDetailsPage() {
   const params = useParams<{ userId: string }>()
+  const userId = params?.userId ?? ""
   const [user, setUser] = useState<UserDetails | null>(null)
   const [tab, setTab] = useState<"enrollments" | "evaluations" | "certificates">("enrollments")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
   useEffect(() => {
+    if (!userId) {
+      setError("Invalid user route.")
+      setLoading(false)
+      return
+    }
+
     const load = async () => {
       try {
-        const response = await apiClient.get(`/api/admin/users/${params.userId}`)
+        const response = await apiClient.get(`/api/admin/users/${userId}`)
         setUser(response.data as UserDetails)
         setError("")
       } catch (loadError: unknown) {
@@ -40,7 +53,7 @@ export default function AdminUserDetailsPage() {
     }
 
     void load()
-  }, [params.userId])
+  }, [userId])
 
   const tabContent = useMemo(() => {
     if (!user) {
@@ -50,7 +63,7 @@ export default function AdminUserDetailsPage() {
     if (tab === "enrollments") {
       return user.enrollments.map((entry) => (
         <div key={entry.id} className="rounded-xl bg-[#12092A] p-4 text-sm text-white">
-          Course {entry.courseId} · Progress {entry.progress}%
+          Course {entry.courseId} - Progress {entry.progress}%
         </div>
       ))
     }
@@ -58,14 +71,14 @@ export default function AdminUserDetailsPage() {
     if (tab === "evaluations") {
       return user.evaluations.map((entry) => (
         <div key={entry.id} className="rounded-xl bg-[#12092A] p-4 text-sm text-white">
-          Course {entry.courseId} · {entry.status} · Score {entry.finalScore ?? "N/A"}
+          Course {entry.courseId} - {entry.status} - Score {entry.finalScore ?? "N/A"}
         </div>
       ))
     }
 
     return user.certificates.map((entry) => (
       <div key={entry.id} className="rounded-xl bg-[#12092A] p-4 text-sm text-white">
-        Course {entry.courseId} · Certificate score {entry.score}
+        Course {entry.courseId} - Certificate score {entry.score}
       </div>
     ))
   }, [tab, user])
@@ -86,7 +99,9 @@ export default function AdminUserDetailsPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-semibold text-white">{user.name}</h1>
-        <p className="mt-2 text-sm text-gray-400">{user.email} · {user.role}</p>
+        <p className="mt-2 text-sm text-gray-400">
+          {user.email} - {user.role}
+        </p>
       </div>
 
       <div className="flex flex-wrap gap-3">

@@ -6,10 +6,10 @@ type ButtonSize = "sm" | "md"
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    "bg-gradient-to-r from-cyan-400 to-violet-500 text-slate-950 shadow-[0_12px_30px_rgba(34,211,238,0.18)] hover:shadow-[0_16px_36px_rgba(34,211,238,0.22)]",
+    "bg-gradient-to-r from-purple-600 to-indigo-700 text-white shadow-[0_12px_30px_rgba(88,28,135,0.24)] hover:shadow-[0_16px_36px_rgba(67,56,202,0.22)]",
   secondary: "border border-slate-800 bg-[#111827] text-white hover:border-slate-700 hover:bg-[#172033]",
   outline:
-    "border border-slate-700 bg-transparent text-white hover:border-cyan-400/30 hover:bg-cyan-400/10",
+    "border border-slate-700 bg-transparent text-white hover:border-purple-400/30 hover:bg-purple-400/10",
   success: "border border-emerald-500/20 bg-emerald-500/12 text-emerald-100 hover:bg-emerald-500/20",
   danger: "border border-rose-500/20 bg-rose-500/12 text-rose-100 hover:bg-rose-500/20",
   ghost: "bg-white/[0.04] text-gray-200 hover:bg-white/[0.08] hover:text-white",

@@ -2,12 +2,11 @@ import { cn } from "@/lib/utils"
 import type { BadgeTone } from "@/lib/admin-panel"
 
 const badgeToneClasses: Record<BadgeTone, string> = {
-  blue: "border-cyan-500/20 bg-cyan-500/12 text-cyan-100",
+  indigo: "border-indigo-500/20 bg-indigo-500/12 text-indigo-100",
   purple: "border-violet-500/20 bg-violet-500/12 text-violet-100",
   green: "border-emerald-500/20 bg-emerald-500/15 text-emerald-200",
   red: "border-rose-500/20 bg-rose-500/12 text-rose-100",
   yellow: "border-orange-500/20 bg-orange-500/12 text-orange-100",
-  cyan: "border-emerald-500/20 bg-emerald-500/12 text-emerald-100",
   slate: "border-slate-700 bg-slate-800/70 text-slate-200",
 }
 

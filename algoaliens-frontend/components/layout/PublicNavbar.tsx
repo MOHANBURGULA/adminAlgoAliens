@@ -68,7 +68,7 @@ export default function PublicNavbar() {
 
           {/* ✅ Signup (CTA button) */}
           <Link href="/signup">
-            <button className="bg-gradient-to-r from-purple-500 to-cyan-400 px-4 py-2 rounded-lg text-white">
+            <button className="rounded-lg bg-gradient-to-r from-purple-600 to-indigo-700 px-4 py-2 text-white">
               Get Started
             </button>
           </Link>

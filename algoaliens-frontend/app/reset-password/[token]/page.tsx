@@ -31,8 +31,9 @@ export default function ResetPasswordPage() {
 
       toast.success(response.data?.message || "Password reset successfully.")
       router.replace("/signin")
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Unable to reset password.")
+    } catch (error: unknown) {
+      const responseError = error as { response?: { data?: { message?: string } } }
+      toast.error(responseError?.response?.data?.message || "Unable to reset password.")
     } finally {
       setSubmitting(false)
     }
@@ -72,7 +73,7 @@ export default function ResetPasswordPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full py-3 rounded-lg bg-gradient-to-r from-purple-500 to-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full rounded-lg bg-gradient-to-r from-purple-600 to-indigo-700 py-3 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? "Resetting..." : "Reset Password"}
           </button>

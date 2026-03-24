@@ -297,7 +297,7 @@ export default function ProjectsPage() {
           type="button"
           onClick={() => void handleSubmit()}
           disabled={submitting || courseStatusLoading || !selectedCourseId || !finalQuizPassed}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-500 to-cyan-400 py-3 font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-700 py-3 font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
         >
           <Send size={18} />
           {submitting ? "Submitting..." : "Submit Project"}

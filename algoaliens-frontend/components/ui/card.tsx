@@ -6,7 +6,7 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card"
       className={cn(
-        "rounded-[28px] border border-slate-800 bg-[linear-gradient(180deg,rgba(17,24,39,0.98),rgba(11,15,26,0.96))] text-white shadow-[0_22px_50px_rgba(0,0,0,0.28)] transition-all duration-200 hover:scale-[1.01] hover:border-slate-700",
+        "rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(19,10,36,0.96),rgba(9,3,18,0.94))] text-white shadow-lg shadow-black/30 transition-all duration-300 hover:scale-[1.02] hover:border-purple-400/25",
         className,
       )}
       {...props}
@@ -32,7 +32,7 @@ function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-description"
-      className={cn("text-sm leading-6 text-slate-400", className)}
+      className={cn("text-sm leading-6 text-slate-300", className)}
       {...props}
     />
   )

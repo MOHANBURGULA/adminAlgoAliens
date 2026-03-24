@@ -6,6 +6,8 @@ import { JwtService } from '@nestjs/jwt'
 import { User } from './user.entity'
 import { UserProfile } from './user-profile.entity'
 import { CreateUserInput, UpdateUserPayload, UserProfilePayload } from './users.types'
+import { CACHE_TTL_SECONDS, CacheKeys } from '../redis/cache.helpers'
+import { RedisService } from '../redis/redis.service'
 
 @Injectable()
 export class UsersService {
@@ -13,6 +15,7 @@ export class UsersService {
     @InjectRepository(User) private userRepo: Repository<User>,
     @InjectRepository(UserProfile) private profileRepo: Repository<UserProfile>,
     private jwtService: JwtService,
+    private readonly redisService: RedisService,
   ) {}
 
   generateJwt(user: User) {
@@ -26,6 +29,18 @@ export class UsersService {
 
   private normalizeEmail(email: string) {
     return email.trim().toLowerCase()
+  }
+
+  private isPasswordHash(password: string) {
+    return /^\$2[aby]\$\d{2}\$/.test(password)
+  }
+
+  private async normalizeStoredPassword(password: string) {
+    if (password === 'GOOGLE_AUTH' || this.isPasswordHash(password)) {
+      return password
+    }
+
+    return bcrypt.hash(password, 10)
   }
 
   private normalizeInterests(value: unknown) {
@@ -69,6 +84,7 @@ export class UsersService {
       ...data,
       email: this.normalizeEmail(data.email),
       name: data.name.trim(),
+      password: await this.normalizeStoredPassword(data.password),
     })
     const saved = await this.userRepo.save(user)
     return saved as User
@@ -86,7 +102,7 @@ export class UsersService {
     const sanitizedData = this.sanitizeUpdateUserPayload(data)
 
     if (sanitizedData.password) {
-      sanitizedData.password = await bcrypt.hash(sanitizedData.password, 10)
+      sanitizedData.password = await this.normalizeStoredPassword(sanitizedData.password)
     }
 
     if (Object.keys(sanitizedData).length === 0) {
@@ -116,7 +132,9 @@ export class UsersService {
 
     if (existing) {
       await this.profileRepo.update({ userId }, profileData)
-      return this.profileRepo.findOne({ where: { userId } })
+      const updatedProfile = await this.profileRepo.findOne({ where: { userId } })
+      await this.redisService.del(CacheKeys.profileUser(userId))
+      return updatedProfile
     }
 
     const profile = this.profileRepo.create({
@@ -124,13 +142,28 @@ export class UsersService {
       ...profileData,
     })
     const saved = await this.profileRepo.save(profile)
+    await this.redisService.del(CacheKeys.profileUser(userId))
     return saved as UserProfile
   }
 
   async getProfile(userId: number): Promise<UserProfile | null> {
+    const cacheKey = CacheKeys.profileUser(userId)
+    const cachedProfile = await this.redisService.getCache<UserProfile>(cacheKey)
+    if (cachedProfile !== null) {
+      return cachedProfile
+    }
+
     const profile = await this.profileRepo.findOne({
       where: { userId },
     })
+
+    if (profile) {
+      await this.redisService.setCache(
+        cacheKey,
+        profile,
+        CACHE_TTL_SECONDS.profileUser,
+      )
+    }
 
     return profile || null
   }

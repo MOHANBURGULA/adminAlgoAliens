@@ -321,7 +321,7 @@ export default function UploadPage() {
             disabled={
               submitting || courseStatusLoading || !selectedCourseId || !finalQuizPassed
             }
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-500 to-cyan-400 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-700 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Send size={18} />
             {submitting ? "Submitting..." : "Submit for Review"}
@@ -364,7 +364,7 @@ export default function UploadPage() {
                   className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-[#12092A] p-4 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="flex items-start gap-3">
-                    <PlayCircle className="mt-1 text-cyan-300" size={18} />
+                    <PlayCircle className="mt-1 text-indigo-300" size={18} />
                     <div>
                       <p className="font-medium text-white">
                         {entry.video?.title || `Video attempt #${entry.evaluation.id}`}
@@ -405,7 +405,7 @@ export default function UploadPage() {
                   className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-[#12092A] p-4 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="flex items-start gap-3">
-                    <PlayCircle className="mt-1 text-cyan-300" size={18} />
+                    <PlayCircle className="mt-1 text-indigo-300" size={18} />
                     <div>
                       <p className="font-medium text-white">{video.title}</p>
                       <p className="mt-1 text-sm text-gray-400">{video.description}</p>

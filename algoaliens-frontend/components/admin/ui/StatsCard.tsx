@@ -34,7 +34,7 @@ export default function StatsCard({
 
         <div
           className={cn(
-            "rounded-2xl border border-slate-800 bg-white/[0.03] p-3 text-cyan-100",
+            "rounded-2xl border border-slate-800 bg-white/[0.03] p-3 text-indigo-100",
             accentClassName,
           )}
         >

@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import * as navigation from "next/navigation"
 import { useState } from "react"
 import toast from "react-hot-toast"
 import { clearAllSessions, clearAuthSession, storeAuthSession } from "@/lib/auth"
@@ -19,7 +19,7 @@ type AuthResponse = {
 }
 
 export default function AdminLoginPage() {
-  const router = useRouter()
+  const router = navigation.useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [submitting, setSubmitting] = useState(false)

@@ -84,12 +84,11 @@ export type AdminChartDatum = {
 }
 
 export type BadgeTone =
-  | "blue"
+  | "indigo"
   | "purple"
   | "green"
   | "red"
   | "yellow"
-  | "cyan"
   | "slate"
 
 export type StatusMeta = {
@@ -140,7 +139,7 @@ export function getRoleMeta(role: string): StatusMeta {
 
   return {
     label: "Student",
-    tone: "blue",
+    tone: "indigo",
   }
 }
 
@@ -176,7 +175,7 @@ export function getDifficultyMeta(difficulty: string): StatusMeta {
   const normalized = difficulty.trim().toLowerCase()
 
   if (normalized === "beginner") {
-    return { label: "Beginner", tone: "cyan" }
+    return { label: "Beginner", tone: "indigo" }
   }
 
   if (normalized === "advanced") {

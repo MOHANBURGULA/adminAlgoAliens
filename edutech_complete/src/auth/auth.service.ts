@@ -4,6 +4,8 @@ import * as bcrypt from 'bcrypt'
 import { MailService } from '../mail/mail.service'
 import { User } from '../users/user.entity'
 import { UsersService } from '../users/users.service'
+import { MetricNames } from '../redis/cache.helpers'
+import { RedisMetricsService } from '../redis/redis-metrics.service'
 
 type SignupPayload = {
   name: string
@@ -24,6 +26,7 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
     private mailService: MailService,
+    private readonly redisMetricsService: RedisMetricsService,
   ) {}
 
   private normalizeEmail(email: string) {
@@ -32,6 +35,19 @@ export class AuthService {
 
   private normalizeName(name: string) {
     return name.trim()
+  }
+
+  private isPasswordHash(password: string) {
+    return /^\$2[aby]\$\d{2}\$/.test(password)
+  }
+
+  private serializeAuthUser(user: User) {
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    }
   }
 
   private getConfiguredAdminRole(email: string) {
@@ -130,10 +146,12 @@ export class AuthService {
     })
 
     this.logger.debug(`Signup success email=${user.email} role=${user.role} tokenIssued=true`)
+    await this.redisMetricsService.increment(MetricNames.signupSuccess)
 
     return {
+      access_token: token,
       token,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      user: this.serializeAuthUser(user),
     }
   }
 
@@ -157,15 +175,12 @@ export class AuthService {
       })
 
       this.logger.debug(`Login success email=${adminUser.email} role=${adminUser.role} tokenIssued=true`)
+      await this.redisMetricsService.increment(MetricNames.authLoginSuccess)
 
       return {
+        access_token: token,
         token,
-        user: {
-          id: adminUser.id,
-          name: adminUser.name,
-          email: adminUser.email,
-          role: adminUser.role,
-        },
+        user: this.serializeAuthUser(adminUser),
       }
     }
 
@@ -173,18 +188,34 @@ export class AuthService {
 
     if (!existingUser) {
       this.logger.warn(`Login failed: user not found for ${normalizedData.email}`)
+      await this.redisMetricsService.increment(MetricNames.authLoginFailure)
       throw new UnauthorizedException('User not found')
     }
 
     if (existingUser.password === 'GOOGLE_AUTH') {
       this.logger.warn(`Login failed: Google account attempted password login for ${existingUser.email}`)
+      await this.redisMetricsService.increment(MetricNames.authLoginFailure)
       throw new UnauthorizedException('Use Google login')
     }
 
-    const valid = await bcrypt.compare(normalizedData.password, existingUser.password)
+    let valid = false
+
+    if (this.isPasswordHash(existingUser.password)) {
+      valid = await bcrypt.compare(normalizedData.password, existingUser.password)
+    } else {
+      valid = normalizedData.password === existingUser.password
+
+      if (valid) {
+        const hashedPassword = await bcrypt.hash(normalizedData.password, 10)
+        await this.usersService.setPasswordHash(existingUser.id, hashedPassword)
+        existingUser.password = hashedPassword
+        this.logger.log(`Upgraded legacy password hash for ${existingUser.email}`)
+      }
+    }
 
     if (!valid) {
       this.logger.warn(`Login failed: invalid password for ${existingUser.email}`)
+      await this.redisMetricsService.increment(MetricNames.authLoginFailure)
       throw new UnauthorizedException('Invalid password')
     }
 
@@ -198,15 +229,12 @@ export class AuthService {
     })
 
     this.logger.debug(`Login success email=${user.email} role=${user.role} tokenIssued=true`)
+    await this.redisMetricsService.increment(MetricNames.authLoginSuccess)
 
     return {
+      access_token: token,
       token,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+      user: this.serializeAuthUser(user),
     }
   }
 

@@ -4,25 +4,25 @@ import { Slot } from "radix-ui"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 overflow-hidden whitespace-nowrap rounded-2xl text-sm font-medium transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/30 disabled:pointer-events-none disabled:opacity-55 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "inline-flex shrink-0 items-center justify-center gap-2 overflow-hidden whitespace-nowrap rounded-2xl text-sm font-medium transition-all duration-300 outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-300/30 active:scale-[0.99] disabled:pointer-events-none disabled:opacity-55 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         default:
-          "bg-gradient-to-r from-cyan-400 to-violet-500 text-slate-950 shadow-[0_12px_30px_rgba(34,211,238,0.18)] hover:scale-105 hover:shadow-[0_16px_38px_rgba(34,211,238,0.24)]",
+          "bg-gradient-to-r from-violet-500 to-fuchsia-600 text-white shadow-[0_16px_40px_rgba(192,132,252,0.24)] hover:-translate-y-0.5 hover:scale-[1.02] hover:brightness-110 hover:shadow-[0_22px_44px_rgba(217,70,239,0.28)] hover:ring-1 hover:ring-fuchsia-300/35",
         primary:
-          "bg-gradient-to-r from-cyan-400 to-violet-500 text-slate-950 shadow-[0_12px_30px_rgba(34,211,238,0.18)] hover:scale-105 hover:shadow-[0_16px_38px_rgba(34,211,238,0.24)]",
+          "bg-gradient-to-r from-violet-500 to-fuchsia-600 text-white shadow-[0_16px_40px_rgba(192,132,252,0.24)] hover:-translate-y-0.5 hover:scale-[1.02] hover:brightness-110 hover:shadow-[0_22px_44px_rgba(217,70,239,0.28)] hover:ring-1 hover:ring-fuchsia-300/35",
         secondary:
-          "border border-slate-800 bg-[#111827] text-white hover:scale-105 hover:border-slate-700 hover:bg-[#172033]",
+          "border border-violet-400/30 bg-transparent text-white hover:-translate-y-0.5 hover:scale-[1.02] hover:border-fuchsia-400/45 hover:bg-gradient-to-r hover:from-violet-500/12 hover:to-fuchsia-500/12 hover:shadow-[0_16px_32px_rgba(139,92,246,0.14)]",
         danger:
-          "border border-red-500/20 bg-red-500/12 text-red-100 hover:scale-105 hover:bg-red-500/20",
+          "border border-red-500/20 bg-red-500/12 text-red-100 hover:scale-[1.02] hover:bg-red-500/20",
         destructive:
-          "border border-red-500/20 bg-red-500/12 text-red-100 hover:scale-105 hover:bg-red-500/20",
+          "border border-red-500/20 bg-red-500/12 text-red-100 hover:scale-[1.02] hover:bg-red-500/20",
         outline:
-          "border border-slate-700 bg-transparent text-white hover:scale-105 hover:border-cyan-400/40 hover:bg-cyan-400/8",
+          "border border-violet-400/30 bg-transparent text-white hover:-translate-y-0.5 hover:scale-[1.02] hover:border-fuchsia-400/45 hover:bg-gradient-to-r hover:from-violet-500/12 hover:to-fuchsia-500/12 hover:shadow-[0_16px_32px_rgba(139,92,246,0.14)]",
         ghost:
-          "bg-transparent text-slate-300 hover:scale-105 hover:bg-white/[0.05] hover:text-white",
-        link: "rounded-none px-0 py-0 text-cyan-300 hover:text-cyan-200 hover:underline",
+          "bg-transparent text-slate-300 hover:-translate-y-0.5 hover:scale-[1.02] hover:bg-white/[0.05] hover:text-white",
+        link: "rounded-none px-0 py-0 text-fuchsia-200 hover:text-white hover:underline",
       },
       size: {
         default: "min-h-11 px-5 py-3",

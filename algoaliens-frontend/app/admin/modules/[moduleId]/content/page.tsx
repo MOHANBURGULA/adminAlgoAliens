@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { useParams, useSearchParams } from "next/navigation"
 import toast from "react-hot-toast"
 import { apiClient } from "@/lib/axios"
@@ -18,11 +18,21 @@ type Module = {
   title: string
 }
 
+function getErrorMessage(error: unknown, fallback: string) {
+  if (typeof error === "object" && error !== null && "response" in error) {
+    return (
+      (error as { response?: { data?: { message?: string } } }).response?.data?.message || fallback
+    )
+  }
+
+  return fallback
+}
+
 export default function AdminModuleContentPage() {
   const params = useParams<{ moduleId: string }>()
   const searchParams = useSearchParams()
-  const moduleId = Number(params.moduleId)
-  const courseId = Number(searchParams.get("courseId"))
+  const moduleId = Number(params?.moduleId || 0)
+  const courseId = Number(searchParams?.get("courseId") || 0)
   const [module, setModule] = useState<Module | null>(null)
   const [documents, setDocuments] = useState<ModuleDocument[]>([])
   const [questions, setQuestions] = useState<AdminQuestion[]>([])
@@ -34,7 +44,7 @@ export default function AdminModuleContentPage() {
   const [correctOptionIndex, setCorrectOptionIndex] = useState(0)
   const [loading, setLoading] = useState(true)
 
-  const loadContent = async () => {
+  const loadContent = useCallback(async () => {
     const [modulesRes, documentsRes, questionsRes] = await Promise.all([
       apiClient.get(`/api/courses/${courseId}/modules`),
       apiClient.get(`/api/courses/${courseId}/modules/${moduleId}/documents`),
@@ -49,7 +59,7 @@ export default function AdminModuleContentPage() {
         (question) => question.moduleId === moduleId,
       ),
     )
-  }
+  }, [courseId, moduleId])
 
   useEffect(() => {
     let cancelled = false
@@ -57,9 +67,9 @@ export default function AdminModuleContentPage() {
     const run = async () => {
       try {
         await loadContent()
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (!cancelled) {
-          toast.error(error?.response?.data?.message || "Unable to load module content.")
+          toast.error(getErrorMessage(error, "Unable to load module content."))
         }
       } finally {
         if (!cancelled) {
@@ -75,7 +85,7 @@ export default function AdminModuleContentPage() {
     return () => {
       cancelled = true
     }
-  }, [courseId, moduleId])
+  }, [courseId, loadContent])
 
   const submitDocument = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -104,8 +114,8 @@ export default function AdminModuleContentPage() {
       setDocumentTitle("")
       await loadContent()
       toast.success("Document uploaded")
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Unable to upload document.")
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Unable to upload document."))
     }
   }
 
@@ -131,8 +141,8 @@ export default function AdminModuleContentPage() {
       setCorrectOptionIndex(0)
       await loadContent()
       toast.success("Question added")
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Unable to add question.")
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Unable to add question."))
     }
   }
 
