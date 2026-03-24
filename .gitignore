@@ -1,0 +1,22 @@
+# nodemdules
+node_modules/
+# build output
+dist/
+
+# local env files
+.env.local
+# log files
+logs/
+# OS generated files
+.DS_Store
+# IDE files
+
+.vscode/
+.idea/
+
+.env
+
+# TypeScript cache
+*.tsbuildinfo
+
+

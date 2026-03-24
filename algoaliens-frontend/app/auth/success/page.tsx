@@ -4,8 +4,19 @@ import { useEffect, useRef } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import toast from "react-hot-toast"
-import { clearAuthSession, resolvePostAuthRoute, storeAuthSession } from "@/lib/auth"
-import { apiClient } from "@/lib/axios"
+import { clearAllSessions, clearAuthSession, resolvePostAuthRoute, storeAuthSession } from "@/lib/auth"
+import { apiClient, getLastApiErrorMessage } from "@/lib/api-client"
+import { getApiErrorMessage } from "@/lib/http"
+
+type AuthResponse = {
+  token?: string
+  user?: {
+    id: number
+    name: string
+    email: string
+    role?: string
+  }
+}
 
 export default function AuthSuccessPage() {
   const router = useRouter()
@@ -13,8 +24,12 @@ export default function AuthSuccessPage() {
   const hasStarted = useRef(false)
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      clearAuthSession()
+    if (status === "loading") {
+      return
+    }
+
+    if (status === "unauthenticated" && !hasStarted.current) {
+      clearAllSessions()
       router.replace("/signup")
       return
     }
@@ -37,29 +52,37 @@ export default function AuthSuccessPage() {
       }
 
       try {
-        const response = await apiClient.post("/api/auth/google", {
+        clearAllSessions()
+
+        const data = await apiClient.post<AuthResponse>("/api/auth/google", {
           email,
           name,
         })
 
-        const token = response.data.token || response.data.access_token
+        if (!data) {
+          throw new Error(getLastApiErrorMessage() || "Unable to complete Google login")
+        }
 
-        if (!token || !response.data.user) {
+        const token = data.token
+
+        console.debug("[auth] google login response", {
+          hasToken: Boolean(token),
+          userId: data.user?.id,
+          role: data.user?.role || "student",
+        })
+
+        if (!token || !data.user) {
           throw new Error("Invalid response from server")
         }
 
-        storeAuthSession(token, response.data.user)
-        const nextRoute = await resolvePostAuthRoute()
+        storeAuthSession(token, data.user)
+        const nextRoute = resolvePostAuthRoute(data.user)
+        toast.success(`Signed in as ${data.user.name || data.user.email}`)
 
         router.replace(nextRoute)
-      } catch (error: any) {
+      } catch (error: unknown) {
         clearAuthSession()
-
-        if (error?.response?.status === 400) {
-          toast.error(error.response?.data?.message || "Google login failed")
-        } else {
-          toast.error("Unable to complete Google login")
-        }
+        toast.error(getApiErrorMessage(error, "Unable to complete Google login"))
 
         router.replace("/signup")
       }

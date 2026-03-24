@@ -1,12 +1,23 @@
 "use client"
 
 import Link from "next/link"
-import { signIn } from "next-auth/react"
+import { signIn, signOut } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import toast from "react-hot-toast"
-import { clearAuthSession, resolvePostAuthRoute, storeAuthSession } from "@/lib/auth"
-import { apiClient } from "@/lib/axios"
+import { clearAllSessions, clearAuthSession, resolvePostAuthRoute, storeAuthSession } from "@/lib/auth"
+import { apiClient, getLastApiErrorMessage } from "@/lib/api-client"
+import { getApiErrorMessage } from "@/lib/http"
+
+type AuthResponse = {
+  token?: string
+  user?: {
+    id: number
+    name: string
+    email: string
+    role?: string
+  }
+}
 
 export default function SignupPage() {
   const router = useRouter()
@@ -15,9 +26,28 @@ export default function SignupPage() {
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
+  const [errorMessage, setErrorMessage] = useState("")
+
+  const handleGoogleSignup = async () => {
+    try {
+      setGoogleLoading(true)
+      clearAllSessions()
+      await signOut({ redirect: false })
+      await signIn("google", {
+        callbackUrl: "/auth/success",
+        prompt: "select_account",
+      })
+    } catch {
+      toast.error("Unable to start Google sign-up")
+      setGoogleLoading(false)
+    }
+  }
 
   const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    setErrorMessage("")
 
     if (!name || !email || !password || !confirmPassword) {
       toast.error("Please fill all fields")
@@ -47,26 +77,43 @@ export default function SignupPage() {
     }
 
     try {
-      const response = await apiClient.post("/api/auth/signup", {
-        name,
-        email,
+      setSubmitting(true)
+      clearAllSessions()
+
+      const data = await apiClient.post<AuthResponse>("/api/auth/signup", {
+        name: name.trim(),
+        email: email.trim(),
         password,
       })
 
-      const token = response.data.token || response.data.access_token
+      if (!data) {
+        throw new Error(getLastApiErrorMessage() || "Signup failed")
+      }
 
-      if (!token || !response.data.user) {
+      const token = data.token
+
+      console.debug("[auth] signup response", {
+        hasToken: Boolean(token),
+        userId: data.user?.id,
+        role: data.user?.role || "student",
+      })
+
+      if (!token || !data.user) {
         throw new Error("Invalid response from server")
       }
 
-      storeAuthSession(token, response.data.user)
-      const nextRoute = await resolvePostAuthRoute()
+      storeAuthSession(token, data.user)
+      const nextRoute = resolvePostAuthRoute(data.user)
 
       toast.success("Account created successfully!")
       router.replace(nextRoute)
-    } catch (error: any) {
+    } catch (error: unknown) {
       clearAuthSession()
-      toast.error(error.response?.data?.message || "Signup failed")
+      const message = getApiErrorMessage(error, "Signup failed")
+      setErrorMessage(message)
+      toast.error(message)
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -93,8 +140,9 @@ export default function SignupPage() {
 
           <button
             type="button"
-            onClick={() => signIn("google", { callbackUrl: "/auth/success" })}
-            className="w-full mb-6 py-3.5 rounded-xl border border-purple-700 hover:bg-purple-900/50 flex items-center justify-center gap-3"
+            onClick={() => void handleGoogleSignup()}
+            disabled={googleLoading || submitting}
+            className="w-full mb-6 py-3.5 rounded-xl border border-purple-700 hover:bg-purple-900/50 flex items-center justify-center gap-3 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -103,7 +151,7 @@ export default function SignupPage() {
               <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
             </svg>
 
-            Continue with Google
+            {googleLoading ? "Opening Google..." : "Continue with Google"}
           </button>
 
           <div className="text-center text-gray-500 my-4">OR</div>
@@ -114,6 +162,7 @@ export default function SignupPage() {
             className="w-full mb-3 p-3 rounded bg-[#1A0F2E]"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            disabled={submitting}
           />
 
           <input
@@ -122,6 +171,7 @@ export default function SignupPage() {
             className="w-full mb-3 p-3 rounded bg-[#1A0F2E]"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            disabled={submitting}
           />
 
           <input
@@ -130,6 +180,7 @@ export default function SignupPage() {
             className="w-full mb-3 p-3 rounded bg-[#1A0F2E]"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            disabled={submitting}
           />
 
           <input
@@ -138,6 +189,7 @@ export default function SignupPage() {
             className="w-full mb-3 p-3 rounded bg-[#1A0F2E]"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
+            disabled={submitting}
           />
 
           <div className="flex items-center gap-2 mb-4 text-sm">
@@ -145,15 +197,21 @@ export default function SignupPage() {
               type="checkbox"
               checked={acceptedTerms}
               onChange={(e) => setAcceptedTerms(e.target.checked)}
+              disabled={submitting}
             />
             <span>I agree to Terms</span>
           </div>
 
+          {errorMessage ? (
+            <p className="mb-4 text-sm text-red-300">{errorMessage}</p>
+          ) : null}
+
           <button
             type="submit"
-            className="w-full py-3 bg-purple-500 rounded"
+            disabled={submitting || googleLoading}
+            className="w-full py-3 bg-purple-500 rounded disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Create Account
+            {submitting ? "Creating account..." : "Create Account"}
           </button>
 
           <p className="text-sm text-center mt-4">

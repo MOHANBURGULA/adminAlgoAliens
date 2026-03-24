@@ -1,59 +1,19 @@
-// import { Controller, Post, Get, Put, Body, UseGuards, Req } from '@nestjs/common'
-// import { UsersService } from './users.service'
-// import { JwtAuthGuard } from '../auth/jwt-auth.guard'
-
-// @Controller('api/users')
-// @UseGuards(JwtAuthGuard)
-// export class UsersController {
-
-//   constructor(private usersService: UsersService) {}
-
-//   // GET /api/users/me — get logged-in user's account info
-//   @Get('me')
-//   getMe(@Req() req: any) {
-//     return this.usersService.findById(req.user.id)
-//       .then(user => {
-//         if (!user) return { message: 'User not found' }
-//         return { id: user.id, name: user.name, email: user.email, role: user.role, createdAt: user.createdAt }
-//       })
-//   }
-
-//   // PUT /api/users/me — update name or password
-//   @Put('me')
-//   updateMe(@Req() req: any, @Body() body: { name?: string; password?: string }) {
-//     return this.usersService.updateUser(req.user.id, body)
-//       .then(user => {
-//         if (!user) return { message: 'User not found' }
-//         return { id: user.id, name: user.name, email: user.email, role: user.role }
-//       })
-//   }
-
-//   // POST /api/users/profile — create or update profile
-//   @Post('profile')
-//   createProfile(@Req() req: any, @Body() body: any) {
-//     return this.usersService.createProfile(req.user.id, body)
-//   }
-
-//   // GET /api/users/profile — get profile
-//   @UseGuards(JwtAuthGuard)
-//   @Get('profile')
-//   getProfile(@Req() req) {
-//     return this.usersService.getProfile(req.user.id)
-//   }
-
-// }
-
-
-import { Controller, Post, Get, Put, Body, UseGuards, Req } from '@nestjs/common'
+import { BadRequestException, Body, Controller, Get, Post, Put, Req, UseGuards } from '@nestjs/common'
 import { UsersService } from './users.service'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
+import type { GoogleLoginPayload, UpdateUserPayload, UserProfilePayload } from './users.types'
 
 @Controller('api/users')
 export class UsersController {
-
   constructor(private usersService: UsersService) {}
 
-  private serializeUser(user: any) {
+  private serializeUser(user: {
+    id: number
+    name: string
+    email: string
+    role: string
+    createdAt?: Date
+  } | null) {
     if (!user) {
       return user
     }
@@ -67,59 +27,75 @@ export class UsersController {
     }
   }
 
-  // ✅ GOOGLE LOGIN (NO JWT)
+  private validateGoogleLoginBody(body: GoogleLoginPayload) {
+    const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : ''
+    const name = typeof body?.name === 'string' ? body.name.trim() : ''
+
+    if (!email || !name) {
+      throw new BadRequestException('Email and name are required for Google login')
+    }
+
+    return { email, name }
+  }
+
   @Post('google-login')
-  async googleLogin(@Body() body: any) {
-    const { email, name } = body;
+  async googleLogin(@Body() body: GoogleLoginPayload) {
+    const { email, name } = this.validateGoogleLoginBody(body)
     let isNewUser = false
 
-    let user = await this.usersService.findByEmail(email);
+    let user = await this.usersService.findByEmail(email)
 
     if (!user) {
       isNewUser = true
       user = await this.usersService.create({
         email,
         name,
-        password: "GOOGLE_AUTH",
-        role: "student",
-      });
+        password: 'GOOGLE_AUTH',
+        role: 'student',
+      })
     }
 
-    const token = this.usersService.generateJwt(user!);
+    const token = this.usersService.generateJwt(user)
 
     return {
       token,
       user: this.serializeUser(user),
       isNewUser,
-    };
+    }
   }
-
-  // ✅ PROTECTED ROUTES
 
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  async getMe(@Req() req: any) {
+  async getMe(@Req() req: { user: { id: number } }) {
     const user = await this.usersService.findById(req.user.id)
     return this.serializeUser(user)
   }
 
   @UseGuards(JwtAuthGuard)
   @Put('me')
-  async updateMe(@Req() req: any, @Body() body: any) {
-    const user = await this.usersService.updateUser(req.user.id, body)
+  async updateMe(
+    @Req() req: { user: { id: number } },
+    @Body() body: UpdateUserPayload,
+  ) {
+    const user = await this.usersService.updateUser(req.user.id, {
+      name: body?.name,
+      password: body?.password,
+    })
     return this.serializeUser(user)
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('profile')
-  createProfile(@Req() req: any, @Body() body: any) {
+  createProfile(
+    @Req() req: { user: { id: number } },
+    @Body() body: Partial<UserProfilePayload>,
+  ) {
     return this.usersService.createProfile(req.user.id, body)
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('profile')
-  getProfile(@Req() req: any) {
+  getProfile(@Req() req: { user: { id: number } }) {
     return this.usersService.getProfile(req.user.id)
   }
 }
-

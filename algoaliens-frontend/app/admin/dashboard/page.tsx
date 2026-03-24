@@ -1,8 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Activity, BookOpen, CreditCard, Users } from "lucide-react"
+import { Activity, BookOpen, Clock3, GraduationCap, ShieldCheck, Video } from "lucide-react"
 import { apiClient } from "@/lib/axios"
+import { getApiErrorMessage } from "@/lib/http"
 
 type AdminDashboard = {
   totalStudents: number
@@ -28,12 +29,11 @@ export default function AdminDashboardPage() {
 
         if (!cancelled) {
           setData(response.data as AdminDashboard)
+          setError("")
         }
-      } catch (loadError: any) {
+      } catch (loadError: unknown) {
         if (!cancelled) {
-          setError(
-            loadError?.response?.data?.message || "Unable to load admin dashboard.",
-          )
+          setError(getApiErrorMessage(loadError, "Unable to load admin dashboard."))
         }
       } finally {
         if (!cancelled) {
@@ -43,9 +43,13 @@ export default function AdminDashboardPage() {
     }
 
     void loadDashboard()
+    const interval = window.setInterval(() => {
+      void loadDashboard()
+    }, 30000)
 
     return () => {
       cancelled = true
+      window.clearInterval(interval)
     }
   }, [])
 
@@ -62,10 +66,16 @@ export default function AdminDashboardPage() {
   }
 
   const cards = [
-    { label: "Total Users", value: data.totalStudents, icon: Users },
-    { label: "Total Courses", value: data.totalCourses, icon: BookOpen },
-    { label: "Total Enrollments", value: data.totalEnrollments, icon: Activity },
-    { label: "Total Revenue", value: "N/A", icon: CreditCard },
+    { label: "Students", value: data.totalStudents, icon: GraduationCap },
+    { label: "Courses", value: data.totalCourses, icon: BookOpen },
+    { label: "Enrollments", value: data.totalEnrollments, icon: Activity },
+    { label: "Certificates", value: data.totalCertificates, icon: ShieldCheck },
+  ]
+
+  const pendingItems = [
+    { label: "Pending evaluations", value: data.pendingEvaluations, icon: Clock3 },
+    { label: "Pending projects", value: data.pendingProjects, icon: Activity },
+    { label: "Pending videos", value: data.pendingVideos, icon: Video },
   ]
 
   return (
@@ -73,7 +83,7 @@ export default function AdminDashboardPage() {
       <div>
         <h1 className="text-3xl font-semibold text-white">Admin Dashboard</h1>
         <p className="mt-2 text-sm text-gray-400">
-          Overview of platform usage, pending reviews, and content operations.
+          Live platform metrics. This screen refreshes automatically every 30 seconds.
         </p>
       </div>
 
@@ -95,18 +105,23 @@ export default function AdminDashboardPage() {
       </div>
 
       <div className="grid gap-5 md:grid-cols-3">
-        <div className="rounded-2xl border border-purple-900/30 bg-[#0B0518] p-6">
-          <p className="text-sm text-gray-400">Pending evaluations</p>
-          <p className="mt-3 text-2xl font-semibold text-white">{data.pendingEvaluations}</p>
-        </div>
-        <div className="rounded-2xl border border-purple-900/30 bg-[#0B0518] p-6">
-          <p className="text-sm text-gray-400">Pending projects</p>
-          <p className="mt-3 text-2xl font-semibold text-white">{data.pendingProjects}</p>
-        </div>
-        <div className="rounded-2xl border border-purple-900/30 bg-[#0B0518] p-6">
-          <p className="text-sm text-gray-400">Pending videos</p>
-          <p className="mt-3 text-2xl font-semibold text-white">{data.pendingVideos}</p>
-        </div>
+        {pendingItems.map((item) => {
+          const Icon = item.icon
+          return (
+            <div key={item.label} className="rounded-2xl border border-purple-900/30 bg-[#0B0518] p-6">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm text-gray-400">{item.label}</p>
+                  <p className="mt-3 text-2xl font-semibold text-white">{item.value}</p>
+                </div>
+                <span className="rounded-full bg-amber-500/20 px-3 py-1 text-xs font-medium text-amber-200">
+                  Pending
+                </span>
+              </div>
+              <Icon className="mt-4 text-purple-300" size={18} />
+            </div>
+          )
+        })}
       </div>
     </div>
   )

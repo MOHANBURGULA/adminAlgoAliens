@@ -1,11 +1,9 @@
 "use client"
 
-import { apiClient } from "./axios"
-
 export const USER_TOKEN_KEY = "token"
 export const USER_KEY = "user"
-export const ADMIN_TOKEN_KEY = "adminToken"
-export const ADMIN_USER_KEY = "adminUser"
+
+type Nullable<T> = T | null
 
 export type StoredUser = {
   id: number
@@ -14,62 +12,75 @@ export type StoredUser = {
   role?: string
 }
 
-export function getActiveToken() {
-  return localStorage.getItem(ADMIN_TOKEN_KEY) || localStorage.getItem(USER_TOKEN_KEY)
+function removeLegacyAuthKeys() {
+  localStorage.removeItem("adminToken")
+  localStorage.removeItem("adminUser")
+  localStorage.removeItem("profileSetup")
+}
+
+function parseStoredUser(rawUser: Nullable<string>) {
+  if (!rawUser) {
+    return null
+  }
+
+  try {
+    return JSON.parse(rawUser) as StoredUser
+  } catch {
+    return null
+  }
+}
+
+export function getStoredToken() {
+  return localStorage.getItem(USER_TOKEN_KEY)
+}
+
+export function getStoredUser() {
+  return parseStoredUser(localStorage.getItem(USER_KEY))
+}
+
+export function isAuthenticated() {
+  return Boolean(getStoredToken())
+}
+
+export function isAdminUser(user?: Nullable<StoredUser>) {
+  return (user || getStoredUser())?.role === "admin"
 }
 
 export function storeAuthSession(token: string, user: StoredUser) {
   localStorage.setItem(USER_TOKEN_KEY, token)
   localStorage.setItem(USER_KEY, JSON.stringify(user))
+  removeLegacyAuthKeys()
+
+  console.debug("[auth] stored session", {
+    userId: user.id,
+    role: user.role || "student",
+    hasToken: Boolean(token),
+  })
 }
 
 export function storeAdminSession(token: string, user: StoredUser) {
-  localStorage.setItem(ADMIN_TOKEN_KEY, token)
-  localStorage.setItem(ADMIN_USER_KEY, JSON.stringify(user))
+  storeAuthSession(token, user)
 }
 
 export function clearAuthSession() {
   localStorage.removeItem(USER_TOKEN_KEY)
   localStorage.removeItem(USER_KEY)
-  localStorage.removeItem("profileSetup")
+  removeLegacyAuthKeys()
 }
 
 export function clearAdminSession() {
-  localStorage.removeItem(ADMIN_TOKEN_KEY)
-  localStorage.removeItem(ADMIN_USER_KEY)
+  clearAuthSession()
 }
 
 export function clearAllSessions() {
   clearAuthSession()
-  clearAdminSession()
 }
 
 export function getStoredAdminUser() {
-  const value = localStorage.getItem(ADMIN_USER_KEY)
-  return value ? (JSON.parse(value) as StoredUser) : null
+  const user = getStoredUser()
+  return user?.role === "admin" ? user : null
 }
 
-export async function resolvePostAuthRoute() {
-  try {
-    await apiClient.get("/api/users/profile")
-    return "/dashboard"
-  } catch (error: any) {
-    if (error?.response?.status === 404) {
-      return "/profile-setup"
-    }
-
-    throw error
-  }
-}
-
-export async function hydrateCurrentUser() {
-  const response = await apiClient.get("/api/users/me")
-  localStorage.setItem(USER_KEY, JSON.stringify(response.data))
-  return response.data as StoredUser
-}
-
-export async function hydrateAdminUser() {
-  const response = await apiClient.get("/api/users/me")
-  localStorage.setItem(ADMIN_USER_KEY, JSON.stringify(response.data))
-  return response.data as StoredUser
+export function resolvePostAuthRoute(user?: Nullable<StoredUser>) {
+  return isAdminUser(user) ? "/admin/dashboard" : "/dashboard"
 }

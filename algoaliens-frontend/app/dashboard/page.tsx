@@ -5,6 +5,8 @@ import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Award, BookOpen, CheckCircle2, Target, User2 } from "lucide-react"
 import { apiClient } from "@/lib/axios"
+import { getApiErrorMessage, isAxiosStatus } from "@/lib/http"
+import { normalizeUserProfile } from "@/lib/profile"
 
 type DashboardEnrollment = {
   id: number
@@ -51,6 +53,23 @@ type DashboardState = {
   recentCourses: Array<DashboardEnrollment & { title: string; difficulty: string }>
 }
 
+function normalizeDashboard(
+  payload: Partial<DashboardResponse> | null | undefined,
+): DashboardResponse {
+  return {
+    enrolledCourses: payload?.enrolledCourses ?? 0,
+    enrollments: Array.isArray(payload?.enrollments) ? payload.enrollments : [],
+    completedModulesCount: payload?.completedModulesCount ?? 0,
+    certificatesEarned: payload?.certificatesEarned ?? 0,
+    evaluationSummary: {
+      total: payload?.evaluationSummary?.total ?? 0,
+      pending: payload?.evaluationSummary?.pending ?? 0,
+      passed: payload?.evaluationSummary?.passed ?? 0,
+      failed: payload?.evaluationSummary?.failed ?? 0,
+    },
+  }
+}
+
 function formatLabel(value?: string) {
   if (!value) {
     return "Not set"
@@ -79,9 +98,11 @@ export default function DashboardPage() {
           apiClient.get("/api/users/profile"),
         ])
 
-        const dashboard = dashboardRes.data as DashboardResponse
+        const dashboard = normalizeDashboard(
+          dashboardRes.data as Partial<DashboardResponse>,
+        )
         const user = userRes.data as User
-        const profile = profileRes.data as Profile
+        const profile = normalizeUserProfile(profileRes.data as Partial<Profile>)
 
         const recentEnrollments = [...dashboard.enrollments]
           .sort(
@@ -116,19 +137,17 @@ export default function DashboardPage() {
             recentCourses,
           })
         }
-      } catch (loadError: any) {
+      } catch (loadError: unknown) {
         if (cancelled) {
           return
         }
 
-        if (loadError?.response?.status === 404) {
+        if (isAxiosStatus(loadError, 404)) {
           router.replace("/profile-setup")
           return
         }
 
-        setError(
-          loadError?.response?.data?.message || "Unable to load dashboard data.",
-        )
+        setError(getApiErrorMessage(loadError, "Unable to load dashboard data."))
       } finally {
         if (!cancelled) {
           setLoading(false)

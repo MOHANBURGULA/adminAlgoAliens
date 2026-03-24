@@ -17,6 +17,7 @@ import { EvaluationModule } from './evaluation/evaluation.module'
 import { AdminModule } from './admin/admin.module'
 import { DashboardModule } from './dashboard/dashboard.module'
 import { LeaderboardModule } from './leaderboard/leaderboard.module'
+import { MailModule } from './mail/mail.module'
 
 @Module({
   imports: [
@@ -51,7 +52,8 @@ import { LeaderboardModule } from './leaderboard/leaderboard.module'
     EvaluationModule,
     AdminModule,
     DashboardModule,
-    LeaderboardModule
+    LeaderboardModule,
+    MailModule
   ],
 })
 export class AppModule {}

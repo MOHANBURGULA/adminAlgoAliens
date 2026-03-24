@@ -184,4 +184,9 @@ export class AdminController {
     return this.service.updateCourse(Number(id), body)
   }
 
+  @Delete('courses/:id')
+  deleteCourse(@Param('id') id: string) {
+    return this.service.deleteCourse(Number(id))
+  }
+
 }

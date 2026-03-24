@@ -41,9 +41,9 @@ bg-[#070312]/70 backdrop-blur border-b border-purple-900/30">
             </a>
              */}
 
-            <a href="#courses" className="hover:text-white transition">
+            <Link href="/courses" className="hover:text-white transition">
               Courses
-            </a>
+            </Link>
 
             <a href="#about" className="hover:text-white transition">
               About

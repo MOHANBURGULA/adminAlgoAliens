@@ -3,59 +3,56 @@
 import "./globals.css"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import Providers from "./providers"
-
 import {
-  LayoutDashboard,
-  BookOpen,
   Award,
+  BookOpen,
+  LayoutDashboard,
+  Library,
   User,
-  Library
 } from "lucide-react"
+import Providers from "./providers"
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-
   const pathname = usePathname()
 
   const hideSidebar =
     pathname?.startsWith("/admin") ||
     pathname === "/" ||
+    pathname === "/courses" ||
     pathname === "/signup" ||
     pathname === "/signin" ||
+    pathname === "/forgot-password" ||
+    pathname?.startsWith("/reset-password/") ||
     pathname === "/profile-setup" ||
     pathname === "/auth/success"
 
   return (
     <html lang="en">
-      <body className="bg-[#070312] text-white">
-
+      <body className="bg-[#0B0F1A] text-white antialiased">
         <Providers>
-
           <div className="grid-bg flex min-h-screen">
-
             {!hideSidebar && (
-              <aside className="w-64 bg-[#0B0518] border-r border-purple-900/30 p-6 hidden md:flex flex-col">
-
-                {/* LOGO */}
+              <aside className="hidden w-64 border-r border-slate-800 bg-[linear-gradient(180deg,rgba(17,24,39,0.98),rgba(11,15,26,0.98))] p-6 md:flex md:flex-col">
                 <Link href="/dashboard">
-                  <h1 className="text-xl font-bold text-purple-400 mb-10 cursor-pointer hover:text-purple-300 transition">
+                  <p className="text-xs uppercase tracking-[0.24em] text-cyan-200/80">
+                    Learning hub
+                  </p>
+                  <h1 className="mb-10 mt-3 text-xl font-semibold text-white transition hover:text-cyan-100">
                     AlgoAliens
                   </h1>
                 </Link>
 
-                {/* NAVIGATION */}
                 <nav className="flex flex-col gap-2">
-
                   <Link
                     href="/dashboard"
-                    className={`flex items-center gap-3 px-4 py-2 rounded-lg transition ${
+                    className={`flex items-center gap-3 rounded-2xl border px-4 py-3 transition ${
                       pathname === "/dashboard"
-                        ? "bg-[#130A24] text-purple-400"
-                        : "hover:bg-[#130A24]"
+                        ? "border-cyan-500/20 bg-cyan-500/10 text-cyan-100"
+                        : "border-transparent text-slate-300 hover:border-slate-800 hover:bg-white/[0.03] hover:text-white"
                     }`}
                   >
                     <LayoutDashboard size={18} />
@@ -64,10 +61,10 @@ export default function RootLayout({
 
                   <Link
                     href="/courses"
-                    className={`flex items-center gap-3 px-4 py-2 rounded-lg transition ${
+                    className={`flex items-center gap-3 rounded-2xl border px-4 py-3 transition ${
                       pathname === "/courses"
-                        ? "bg-[#130A24] text-purple-400"
-                        : "hover:bg-[#130A24]"
+                        ? "border-cyan-500/20 bg-cyan-500/10 text-cyan-100"
+                        : "border-transparent text-slate-300 hover:border-slate-800 hover:bg-white/[0.03] hover:text-white"
                     }`}
                   >
                     <BookOpen size={18} />
@@ -76,10 +73,10 @@ export default function RootLayout({
 
                   <Link
                     href="/my-courses"
-                    className={`flex items-center gap-3 px-4 py-2 rounded-lg transition ${
+                    className={`flex items-center gap-3 rounded-2xl border px-4 py-3 transition ${
                       pathname === "/my-courses"
-                        ? "bg-[#130A24] text-purple-400"
-                        : "hover:bg-[#130A24]"
+                        ? "border-cyan-500/20 bg-cyan-500/10 text-cyan-100"
+                        : "border-transparent text-slate-300 hover:border-slate-800 hover:bg-white/[0.03] hover:text-white"
                     }`}
                   >
                     <Library size={18} />
@@ -88,10 +85,10 @@ export default function RootLayout({
 
                   <Link
                     href="/certificates"
-                    className={`flex items-center gap-3 px-4 py-2 rounded-lg transition ${
+                    className={`flex items-center gap-3 rounded-2xl border px-4 py-3 transition ${
                       pathname === "/certificates"
-                        ? "bg-[#130A24] text-purple-400"
-                        : "hover:bg-[#130A24]"
+                        ? "border-cyan-500/20 bg-cyan-500/10 text-cyan-100"
+                        : "border-transparent text-slate-300 hover:border-slate-800 hover:bg-white/[0.03] hover:text-white"
                     }`}
                   >
                     <Award size={18} />
@@ -100,35 +97,30 @@ export default function RootLayout({
 
                   <Link
                     href="/profile"
-                    className={`flex items-center gap-3 px-4 py-2 rounded-lg transition ${
+                    className={`flex items-center gap-3 rounded-2xl border px-4 py-3 transition ${
                       pathname === "/profile"
-                        ? "bg-[#130A24] text-purple-400"
-                        : "hover:bg-[#130A24]"
+                        ? "border-cyan-500/20 bg-cyan-500/10 text-cyan-100"
+                        : "border-transparent text-slate-300 hover:border-slate-800 hover:bg-white/[0.03] hover:text-white"
                     }`}
                   >
                     <User size={18} />
                     Profile
                   </Link>
-
                 </nav>
 
-                {/* FOOTER */}
-                <div className="mt-auto pt-8 text-xs text-gray-500">
-                  AlgoAliens © 2026
-                </div>
-
+                <div className="mt-auto pt-8 text-xs text-slate-500">AlgoAliens © 2026</div>
               </aside>
             )}
 
-            {/* MAIN CONTENT */}
-            <main className="flex-1 p-8 overflow-y-auto">
+            <main
+              className={`flex-1 overflow-y-auto ${
+                hideSidebar ? "" : "px-6 py-6 lg:px-8 lg:py-8"
+              }`}
+            >
               {children}
             </main>
-
           </div>
-
         </Providers>
-
       </body>
     </html>
   )

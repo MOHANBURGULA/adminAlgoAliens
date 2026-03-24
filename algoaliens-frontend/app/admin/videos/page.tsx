@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { apiClient } from "@/lib/axios"
+import { getApiErrorMessage } from "@/lib/http"
 
 type Video = {
   id: number
@@ -15,24 +16,59 @@ type Video = {
 
 export default function AdminVideosPage() {
   const [videos, setVideos] = useState<Video[]>([])
-
-  const loadVideos = async () => {
-    const response = await apiClient.get("/api/admin/videos")
-    setVideos(response.data as Video[])
-  }
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
 
   useEffect(() => {
+    let cancelled = false
+
+    const loadVideos = async () => {
+      try {
+        const response = await apiClient.get("/api/admin/videos")
+
+        if (!cancelled) {
+          setVideos(response.data as Video[])
+          setError("")
+        }
+      } catch (loadError: unknown) {
+        if (!cancelled) {
+          setError(getApiErrorMessage(loadError, "Unable to load videos."))
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
     void loadVideos()
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const updateStatus = async (id: number, status: string) => {
     try {
       await apiClient.put(`/api/admin/videos/${id}/status`, { status })
-      await loadVideos()
+      const response = await apiClient.get("/api/admin/videos")
+      setVideos(response.data as Video[])
       toast.success(`Video ${status}`)
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Unable to update video.")
+    } catch (error: unknown) {
+      toast.error(getApiErrorMessage(error, "Unable to update video."))
     }
+  }
+
+  if (loading) {
+    return <div className="text-gray-300">Loading video reviews...</div>
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-6 text-red-100">
+        {error}
+      </div>
+    )
   }
 
   return (

@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common'
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
-import { Repository } from 'typeorm'
+import { In, Repository } from 'typeorm'
 import { User } from '../users/user.entity'
 import { Enrollment } from '../enrollments/enrollment.entity'
 import { Evaluation } from '../evaluation/evaluation.entity'
@@ -278,6 +278,40 @@ export class AdminService {
   async updateCourse(id: number, data: { title?: string; difficulty?: string }) {
     await this.courseRepo.update(id, data)
     return this.courseRepo.findOne({ where: { id } })
+  }
+
+  async deleteCourse(id: number) {
+    const course = await this.courseRepo.findOne({ where: { id } })
+
+    if (!course) {
+      throw new NotFoundException('Course not found')
+    }
+
+    const enrollmentCount = await this.enrollmentRepo.count({ where: { courseId: id } })
+
+    if (enrollmentCount > 0) {
+      throw new BadRequestException('Cannot delete course with enrollments')
+    }
+
+    const modules = await this.moduleRepo.find({ where: { courseId: id } })
+    const moduleIds = modules.map((module) => module.id)
+
+    if (moduleIds.length > 0) {
+      await this.documentRepo.delete({ moduleId: In(moduleIds) })
+    }
+
+    await Promise.all([
+      this.moduleRepo.delete({ courseId: id }),
+      this.progressRepo.delete({ courseId: id }),
+      this.questionRepo.delete({ courseId: id }),
+      this.evaluationRepo.delete({ courseId: id }),
+      this.certificateRepo.delete({ courseId: id }),
+      this.projectRepo.delete({ courseId: id }),
+    ])
+
+    await this.courseRepo.remove(course)
+
+    return { message: 'Deleted successfully' }
   }
 
 }

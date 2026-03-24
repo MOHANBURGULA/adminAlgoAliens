@@ -1,20 +1,50 @@
 "use client"
 
 import Link from "next/link"
-import { signIn } from "next-auth/react"
+import { signIn, signOut } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import toast from "react-hot-toast"
-import { clearAuthSession, resolvePostAuthRoute, storeAuthSession } from "@/lib/auth"
-import { apiClient } from "@/lib/axios"
+import { clearAllSessions, clearAuthSession, resolvePostAuthRoute, storeAuthSession } from "@/lib/auth"
+import { apiClient, getLastApiErrorMessage } from "@/lib/api-client"
+import { getApiErrorMessage } from "@/lib/http"
+
+type AuthResponse = {
+  token?: string
+  user?: {
+    id: number
+    name: string
+    email: string
+    role?: string
+  }
+}
 
 export default function SigninPage() {
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [submitting, setSubmitting] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
+  const [errorMessage, setErrorMessage] = useState("")
+
+  const handleGoogleSignin = async () => {
+    try {
+      setGoogleLoading(true)
+      clearAllSessions()
+      await signOut({ redirect: false })
+      await signIn("google", {
+        callbackUrl: "/auth/success",
+        prompt: "select_account",
+      })
+    } catch {
+      toast.error("Unable to start Google sign-in")
+      setGoogleLoading(false)
+    }
+  }
 
   const handleSignin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    setErrorMessage("")
 
     if (!email || !password) {
       toast.error("Please fill all fields")
@@ -22,27 +52,42 @@ export default function SigninPage() {
     }
 
     try {
-      const response = await apiClient.post("/api/auth/login", {
-        email,
+      setSubmitting(true)
+      clearAllSessions()
+
+      const data = await apiClient.post<AuthResponse>("/api/auth/login", {
+        email: email.trim(),
         password,
       })
 
-      const token = response.data.token || response.data.access_token
+      if (!data) {
+        throw new Error(getLastApiErrorMessage() || "Login failed")
+      }
 
-      if (!token || !response.data.user) {
+      const token = data.token
+
+      console.debug("[auth] login response", {
+        hasToken: Boolean(token),
+        userId: data.user?.id,
+        role: data.user?.role || "student",
+      })
+
+      if (!token || !data.user) {
         throw new Error("Invalid response from server")
       }
 
-      storeAuthSession(token, response.data.user)
-      const nextRoute = await resolvePostAuthRoute()
+      storeAuthSession(token, data.user)
+      const nextRoute = resolvePostAuthRoute(data.user)
 
       toast.success("Login successful!")
       router.replace(nextRoute)
-    } catch (error: any) {
+    } catch (error: unknown) {
       clearAuthSession()
-      toast.error(
-        error.response?.data?.message || "Invalid email or password",
-      )
+      const message = getApiErrorMessage(error, "Invalid email or password")
+      setErrorMessage(message)
+      toast.error(message)
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -59,10 +104,11 @@ export default function SigninPage() {
         <div className="space-y-4">
           <button
             type="button"
-            onClick={() => signIn("google", { callbackUrl: "/auth/success" })}
-            className="w-full py-3 rounded-lg border border-purple-700 hover:bg-purple-900/40"
+            onClick={() => void handleGoogleSignin()}
+            disabled={googleLoading || submitting}
+            className="w-full py-3 rounded-lg border border-purple-700 hover:bg-purple-900/40 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Continue with Google
+            {googleLoading ? "Opening Google..." : "Continue with Google"}
           </button>
 
           <input
@@ -71,6 +117,7 @@ export default function SigninPage() {
             className="w-full p-3 rounded-lg bg-[#0A0A0F] border border-purple-700"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            disabled={submitting}
           />
 
           <input
@@ -79,17 +126,29 @@ export default function SigninPage() {
             className="w-full p-3 rounded-lg bg-[#0A0A0F] border border-purple-700"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            disabled={submitting}
           />
+
+          {errorMessage ? (
+            <p className="text-sm text-red-300">{errorMessage}</p>
+          ) : null}
 
           <button
             type="submit"
-            className="w-full py-3 rounded-lg bg-gradient-to-r from-purple-500 to-cyan-400"
+            disabled={submitting || googleLoading}
+            className="w-full py-3 rounded-lg bg-gradient-to-r from-purple-500 to-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Sign In
+            {submitting ? "Signing in..." : "Sign In"}
           </button>
         </div>
 
         <p className="text-sm text-gray-400 text-center mt-6">
+          <Link href="/forgot-password" className="text-purple-400">
+            Forgot password?
+          </Link>
+        </p>
+
+        <p className="text-sm text-gray-400 text-center mt-3">
           Don&apos;t have an account?{" "}
           <Link href="/signup" className="text-purple-400">
             Create account

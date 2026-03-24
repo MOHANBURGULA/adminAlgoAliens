@@ -155,23 +155,23 @@ export async function seedDsaCourse() {
     .data as AdminQuestion[]
 
   for (const [index, title] of modules.entries()) {
-    let module =
+    let moduleItem =
       existingModules.find((entry) => entry.orderIndex === index + 1) ||
       existingModules.find((entry) => entry.title === title)
 
-    if (!module) {
-      module = (await apiClient.post("/api/admin/modules", {
+    if (!moduleItem) {
+      moduleItem = (await apiClient.post("/api/admin/modules", {
         courseId: course.id,
         title,
         orderIndex: index + 1,
       })).data as AdminModule
 
-      existingModules.push(module)
+      existingModules.push(moduleItem)
     }
 
     const documentTitle = `${title} Theory`
     const existingDocuments = await apiClient.get(
-      `/api/courses/${course.id}/modules/${module.id}/documents`,
+      `/api/courses/${course.id}/modules/${moduleItem.id}/documents`,
     )
 
     if (!(existingDocuments.data as Array<{ title: string }>).some((doc) => doc.title === documentTitle)) {
@@ -183,7 +183,7 @@ export async function seedDsaCourse() {
       )
 
       await apiClient.post("/api/admin/modules/documents", {
-        moduleId: module.id,
+        moduleId: moduleItem.id,
         label: `${index + 1}.1`,
         title: documentTitle,
         fileUrl: upload.fileUrl,
@@ -191,13 +191,13 @@ export async function seedDsaCourse() {
     }
 
     const existingModuleQuestions = existingQuestions.filter(
-      (question) => question.moduleId === module.id,
+      (question) => question.moduleId === moduleItem.id,
     )
 
     const questions =
       title === "Final Evaluation"
-        ? createFinalQuestions(course.id, module.id)
-        : createModuleQuestions(course.id, module.id, title)
+        ? createFinalQuestions(course.id, moduleItem.id)
+        : createModuleQuestions(course.id, moduleItem.id, title)
 
     if (existingModuleQuestions.length < questions.length) {
       const remainingQuestions = questions.slice(existingModuleQuestions.length)

@@ -1,6 +1,7 @@
-import { Body, Controller, Post } from '@nestjs/common'
+import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common'
 import { AuthService } from './auth.service'
 import { UsersService } from '../users/users.service'
+import { JwtAuthGuard } from './jwt-auth.guard'
 
 @Controller('api/auth')
 export class AuthController {
@@ -20,6 +21,11 @@ export class AuthController {
     return 'student'
   }
 
+  private isConfiguredAdminEmail(email: string) {
+    const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase()
+    return Boolean(adminEmail && email.toLowerCase() === adminEmail)
+  }
+
   @Post('signup')
   signup(@Body() body: { name: string; email: string; password: string }) {
     return this.authService.signup(body)
@@ -28,6 +34,24 @@ export class AuthController {
   @Post('login')
   login(@Body() body: { email: string; password: string }) {
     return this.authService.login(body)
+  }
+
+  @Get('change-password')
+  getChangePasswordInfo() {
+    return {
+      message: 'Use POST /api/auth/change-password with a valid Bearer token to send a reset link.',
+    }
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('change-password')
+  changePassword(@Req() req: { user: { id: number } }) {
+    return this.authService.changePassword(req.user.id)
+  }
+
+  @Post('reset-password')
+  resetPassword(@Body() body: { token: string; newPassword: string }) {
+    return this.authService.resetPassword(body.token, body.newPassword)
   }
 
   @Post('google')
@@ -44,7 +68,7 @@ export class AuthController {
         password: 'GOOGLE_AUTH',
         role: this.getConfiguredAdminRole(email),
       })
-    } else if (user.role !== this.getConfiguredAdminRole(email)) {
+    } else if (this.isConfiguredAdminEmail(email) && user.role !== this.getConfiguredAdminRole(email)) {
       const updatedUser = await this.usersService.updateRole(
         user.id,
         this.getConfiguredAdminRole(email),

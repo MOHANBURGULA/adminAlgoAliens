@@ -1,0 +1,270 @@
+Auth + Profile System Changes
+Date: 2026-03-22
+
+Overview
+- Fixed login/signup redirect persistence and removed the auth loop on public auth pages.
+- Fixed NextAuth Google route so /api/auth/providers and /api/auth/session return JSON correctly.
+- Fixed password reset flow to use JWT + Nodemailer.
+- Removed old-password-based password change flow.
+- Fixed profile setup redirect logic so existing users do not see setup repeatedly.
+- Fixed profile fetch to remain user-specific and dynamic.
+- Fixed stale/static logged-in user state by clearing old sessions before every new manual or Google login.
+
+Existing API routes and what changed
+
+1. POST /api/auth/signup
+- Route path unchanged.
+- Frontend stores the returned JWT token and then validates user state using GET /api/users/me.
+- Frontend checks GET /api/users/profile to decide whether to go to Dashboard or Profile Setup.
+- Previous session data is cleared before a new signup starts.
+
+2. POST /api/auth/login
+- Route path unchanged.
+- Frontend stores the returned JWT token and then validates user state using GET /api/users/me.
+- Frontend checks GET /api/users/profile to decide whether to go to Dashboard or Profile Setup.
+- Sign-in page auto-checks an existing token on load and redirects authenticated users away from the login screen.
+- Previous session data is cleared before a new login starts.
+
+3. POST /api/auth/change-password
+- Route path unchanged.
+- Logic changed completely.
+- No longer accepts or validates oldPassword from the frontend.
+- Logged-in user is extracted from JWT using req.user.
+- Backend fetches the registered DB user using req.user.id.
+- Backend generates a JWT reset token with 15 minute expiry.
+- Backend sends reset email only to the registered email stored in DB.
+- Works for both normal users and Google users.
+- Frontend now sends this request only to trigger reset email delivery.
+- Frontend shows visible in-app success/error status after the request.
+- Direct browser GET access to /api/auth/change-password now returns a clear usage message instead of a confusing 404.
+
+4. GET /api/users/me
+- Route path unchanged.
+- Used after login and signup to fetch the current logged-in user.
+- Used on app load to validate persisted JWT and keep protected routes authenticated after refresh.
+- Used as the source of truth for logged-in user data instead of trusting stale localStorage user state.
+
+5. GET /api/users/profile
+- Route path unchanged.
+- Backend returns actual profile when found.
+- Backend returns null when profile does not exist.
+- Frontend uses this to decide:
+  Dashboard if profile.skillLevel exists
+  Profile Setup if profile is null or incomplete
+- Profile and dashboard pages use this route to render user-specific profile data dynamically.
+
+Additional internal handler
+
+6. POST /api/auth/reset-password
+- Added as internal password reset completion handler.
+- Verifies reset JWT token.
+- Extracts userId from token.
+- Fetches user from DB.
+- Hashes new password with bcrypt.
+- Saves hashed password to DB.
+- Returns success message.
+
+Mail service changes
+- Added reusable Nodemailer mail service.
+- Reset email is sent only to the email retrieved from the database.
+- Reset link format:
+  http://localhost:3000/reset-password/{token}
+- SMTP is configuration-based.
+- Supports SMTP service-based config such as Gmail.
+- Supports both key formats:
+  SMTP_USER / SMTP_PASS
+  EMAIL_USER / EMAIL_PASS
+- If SMTP credentials are missing, backend returns an explicit error and frontend displays it in-app.
+
+Backend changes by file
+
+1. edutech_complete/src/auth/auth.service.ts
+- Replaced old password verification logic with reset-link flow.
+- Added resetPassword(token, newPassword).
+- Added JWT token generation for reset links with 15 minute expiry.
+- Added bcrypt hashing before saving new password.
+- Integrated Nodemailer mail service.
+
+2. edutech_complete/src/auth/auth.controller.ts
+- Kept existing public routes unchanged.
+- Added protected POST /api/auth/change-password handler using req.user.id.
+- Added internal POST /api/auth/reset-password handler.
+- Added GET /api/auth/change-password informational response to explain that reset link sending requires POST with JWT.
+
+3. edutech_complete/src/auth/auth.module.ts
+- Wired mail module into auth module.
+
+4. edutech_complete/src/users/users.service.ts
+- Added setPasswordHash for saving already-hashed passwords safely.
+- Changed getProfile to return profile or null.
+
+5. edutech_complete/src/mail/mail.service.ts
+- Added reusable Nodemailer email sender for password reset.
+- Sends reset mail through Nodemailer transport configuration.
+- Returns clear configuration error when email service is not configured.
+
+6. edutech_complete/src/mail/mail.module.ts
+- Added mail module export for auth usage.
+
+7. edutech_complete/src/app.module.ts
+- Registered mail module.
+
+8. edutech_complete/package.json
+- Added mail delivery dependencies needed for reset email delivery.
+
+9. edutech_complete/.env
+- Added SMTP placeholders required for password reset email delivery.
+- Added EMAIL_USER and EMAIL_PASS placeholders for Gmail/App Password setup.
+
+10. edutech_complete/.env.example
+- Added example SMTP configuration keys for Nodemailer and Gmail app-password setup.
+- Added example EMAIL_USER and EMAIL_PASS keys.
+- Default sender/email examples now use mohanburgula5@gmail.com for Nodemailer reset mail configuration.
+
+Frontend changes by file
+
+1. algoaliens-frontend/lib/auth.ts
+- Login flow fetches GET /api/users/me and GET /api/users/profile after storing token.
+- Redirect decision depends on whether profile.skillLevel exists.
+- Clears all previous session storage before saving a new user auth session.
+- Uses GET /api/users/me as the source of truth for the logged-in user.
+
+2. algoaliens-frontend/lib/axios.ts
+- Keeps user JWT preference for user routes so profile/auth data stays tied to the current logged-in user.
+
+3. algoaliens-frontend/app/providers.tsx
+- Added global auth validation on app load using the stored JWT.
+- Protected routes validate the token through GET /api/users/me.
+- Invalid token clears storage and redirects to sign-in.
+- Public auth pages redirect authenticated users away from sign-in/signup.
+- Reset-password page is treated as a public route so the emailed reset link can open without auth.
+
+4. algoaliens-frontend/app/signin/page.tsx
+- Sign-in restores existing authenticated sessions on page load.
+- Valid stored token redirects to the correct next page instead of leaving the user stuck on the login page.
+- Clears previous session storage before manual login and before starting Google auth.
+
+5. algoaliens-frontend/app/signup/page.tsx
+- Signup restores existing authenticated sessions on page load.
+- Valid stored token redirects authenticated users away from signup.
+- Clears previous session storage before manual signup and before starting Google auth.
+
+6. algoaliens-frontend/app/auth/success/page.tsx
+- Clears previous session storage before finalizing Google login with the backend JWT.
+
+7. algoaliens-frontend/app/profile-setup/page.tsx
+- Setup page checks GET /api/users/me and GET /api/users/profile before showing setup.
+- Existing users with completed profile are redirected to Dashboard.
+- Only new or incomplete users stay on setup page.
+
+8. algoaliens-frontend/app/dashboard/page.tsx
+- Dashboard checks profile data returned from GET /api/users/profile.
+- If profile is null or incomplete, the user is redirected to Profile Setup instead of rendering broken/null profile data.
+
+9. algoaliens-frontend/app/profile/page.tsx
+- Profile data loads dynamically for the logged-in user.
+- Password section sends reset email request instead of asking for old password.
+- Name update still uses PUT /api/users/me.
+- Profile details still use GET /api/users/profile.
+- Added visible in-app password reset status panel for success and error states.
+
+10. algoaliens-frontend/app/reset-password/[token]/page.tsx
+- Added reset password page for completing password reset from emailed link.
+- Sends token + newPassword to internal reset-password handler.
+
+11. algoaliens-frontend/app/api/auth/[...nextauth]/route.ts
+- Fixed NextAuth route registration/config.
+- Added explicit NextAuth options, JWT session strategy, runtime=nodejs, and trustHost.
+- Fixed Google auth client fetch failure where NextAuth endpoints were returning HTML/404 instead of JSON.
+
+Expected result after changes
+- Different users show different emails and profiles after login.
+- Logging out and logging back in as another user loads the correct new user from GET /api/users/me.
+- Frontend cannot pass a custom email for reset.
+- Password reset email goes only to the registered email of the logged-in user.
+- Old password is no longer required.
+- Reset password stores a bcrypt-hashed password.
+- Reset request shows a visible in-app success or error status.
+- Existing users go directly to Dashboard if profile is complete.
+- New users go to Profile Setup only when profile is missing or incomplete.
+- Existing route paths remain unchanged.
+- Google auth NextAuth endpoints respond with JSON correctly.
+
+JWT auth contract alignment update
+Date: 2026-03-23
+
+Overview
+- Aligned manual auth handling with the backend contract:
+  POST /api/auth/signup returns { token, user }
+  POST /api/auth/login returns { token, user }
+  Authorization header must be Bearer <token>
+- Preserved the existing Google OAuth flow and only aligned its session storage and redirect behavior with the JWT flow.
+- Fixed admin login Unauthorized issues caused by split token storage and inconsistent frontend auth state.
+- Fixed profile update so email is visible but not editable and is never sent in PUT /api/users/me.
+
+Change details
+
+1. Frontend session storage
+- Frontend now treats localStorage token and user as the single source of truth for both student and admin sessions.
+- Login, signup, admin login, and Google auth success all store:
+  localStorage["token"]
+  localStorage["user"]
+- Legacy adminToken/adminUser values are cleared when a new auth session is stored.
+
+2. Frontend request wrapper
+- Shared axios wrapper now always reads localStorage["token"].
+- All authenticated requests now send:
+  Authorization: Bearer <token>
+- Added 401 handling that clears auth storage and redirects to the correct login page.
+- Added debug logs for:
+  login response
+  token storage
+  Authorization headers sent with requests
+
+3. Manual login flow
+- Frontend login request uses POST /api/auth/login with JSON body:
+  { email, password }
+- Added preventDefault, loading state, inline error state, and awaited API submission.
+- On successful login:
+  admin role -> /admin/dashboard
+  non-admin with profile -> /dashboard
+  non-admin without profile -> /profile-setup
+
+4. Manual signup flow
+- Frontend signup request uses POST /api/auth/signup with JSON body:
+  { name, email, password }
+- Added preventDefault, loading state, inline error state, and awaited API submission.
+- On successful signup:
+  store token
+  store user
+  redirect to /profile-setup
+
+5. Google OAuth compatibility
+- Existing NextAuth Google OAuth flow remains unchanged.
+- /auth/success still exchanges Google identity with the backend at POST /api/auth/google.
+- Google-authenticated users now store the returned backend JWT in the same token/user keys used by manual auth.
+- Backend manual login remains compatible with Google-created accounts by bypassing password comparison for records created through Google auth.
+
+6. Admin access flow
+- Admin login now validates role from response.user.role === "admin" before redirecting.
+- Admin route bootstrap now validates the stored JWT through GET /api/users/me instead of relying on stale separate admin storage.
+- Admin-only backend guard behavior remains unchanged and still requires user.role === "admin".
+- Added backend guard failure logs to make Forbidden/Unauthorized cases easier to trace.
+
+7. Profile update behavior
+- Profile page email field is now disabled/readOnly.
+- Frontend no longer sends email in PUT /api/users/me.
+- Backend PUT /api/users/me now ignores email even if provided and only updates allowed fields.
+- Profile save now refetches GET /api/users/me and GET /api/users/profile after update so UI reflects persisted backend state.
+
+8. Backend login behavior
+- Backend login continues to use bcrypt.compare() for normal manual-password users.
+- Backend login now normalizes email before lookup.
+- Backend login adds explicit success/failure logs for easier debugging.
+- Existing Google OAuth route was not altered, preserving the working feature.
+
+Verification
+- Backend build completed successfully with npm.cmd run build.
+- Targeted frontend eslint check passed for the auth files that were changed.
+- Frontend TypeScript check passed with npx.cmd tsc --noEmit.
+- Full frontend lint still reports unrelated pre-existing issues outside this auth change set.

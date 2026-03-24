@@ -1,3 +1,7 @@
+@import "@fontsource/poppins/300.css";
+@import "@fontsource/poppins/400.css";
+@import "@fontsource/poppins/500.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -6,21 +10,45 @@
 /* ---------- GLOBAL BODY ---------- */
 
 body{
-  background: #06020D;
+  background: #0B0F1A;
   color: white;
+  font-family: "Poppins", sans-serif;
+}
+
+.admin-shell{
+  font-family: "Poppins", sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+}
+
+.admin-shell h1,
+.admin-shell h2,
+.admin-shell h3,
+.admin-shell h4,
+.admin-shell strong{
+  font-weight: 500;
+}
+
+.admin-shell .font-bold,
+.admin-shell .font-semibold{
+  font-weight: 500 !important;
+}
+
+.admin-shell .font-medium{
+  font-weight: 400 !important;
 }
 
 
 /* ---------- GRID BACKGROUND (GLOBAL) ---------- */
 
 .grid-bg{
-  background-color:#070312;
+  background-color:#0B0F1A;
 
   background-image:
-  linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
-  linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+  linear-gradient(rgba(148,163,184,0.05) 1px, transparent 1px),
+  linear-gradient(90deg, rgba(148,163,184,0.05) 1px, transparent 1px);
 
-  background-size:70px 80px;
+  background-size:72px 72px;
 }
 
 
@@ -31,31 +59,31 @@ body{
 /* dashboard card style */
 
 .dashboard-card{
-  @apply bg-[#130A24] border border-[#2B1A47] rounded-xl;
+  @apply rounded-2xl border border-slate-800 bg-[#111827];
 }
 
 
 /* ---------- CARD HOVER ---------- */
 
 .card-ui{
-  @apply bg-[#0f0622] border border-purple-700/30 rounded-xl p-6 transition-all duration-300;
+  @apply rounded-2xl border border-slate-800 bg-[#111827] p-6 transition-all duration-200;
 }
 
 .card-ui:hover{
-  @apply border-purple-500 bg-[#140a2e] -translate-y-[2px] shadow-lg shadow-purple-500/20;
+  @apply -translate-y-1 scale-[1.01] border-slate-700 bg-[#172033] shadow-xl shadow-black/25;
 }
 
 
 /* ---------- BUTTON ---------- */
 
 .btn-primary{
-  @apply px-5 py-3 rounded-lg font-semibold 
-  bg-gradient-to-r from-purple-500 via-purple-400 to-cyan-400
+  @apply rounded-2xl px-5 py-3 font-semibold 
+  bg-gradient-to-r from-cyan-400 to-violet-500 text-slate-950
   transition-all duration-200;
 }
 
 .btn-primary:hover{
-  @apply scale-[1.03] shadow-lg shadow-purple-500/30;
+  @apply scale-105 shadow-lg shadow-cyan-500/20;
 }
 
 .btn-primary:active{
@@ -66,15 +94,15 @@ body{
 /* ---------- INPUT ---------- */
 
 .input-ui{
-  @apply w-full bg-[#140a2e] border border-purple-700/30 rounded-lg px-4 py-3 text-white transition;
+  @apply h-12 w-full rounded-2xl border border-slate-800 bg-[#0F172A] px-4 py-3 text-white transition-all duration-200;
 }
 
 .input-ui:hover{
-  @apply border-purple-500;
+  @apply border-slate-700;
 }
 
 .input-ui:focus{
-  @apply border-purple-500 ring-2 ring-purple-500/30 outline-none;
+  @apply border-cyan-400/40 ring-2 ring-cyan-400/20 outline-none;
 }
 
 
@@ -85,7 +113,7 @@ body{
 }
 
 .list-item:hover{
-  @apply bg-[#140a2e];
+  @apply bg-[#172033];
 }
 
 
@@ -96,18 +124,34 @@ body{
 }
 
 .sidebar-item:hover{
-  @apply bg-purple-600/20 text-white;
+  @apply bg-white/[0.04] text-white;
 }
 
 
 /* ---------- UPLOAD BOX ---------- */
 
 .upload-box{
-  @apply border border-purple-700/30 bg-[#0f0622] rounded-xl p-10 text-center transition-all;
+  @apply rounded-2xl border border-slate-800 bg-[#111827] p-10 text-center transition-all duration-200;
 }
 
 .upload-box:hover{
-  @apply border-purple-500 bg-[#140a2e] shadow-lg shadow-purple-500/20;
+  @apply scale-[1.01] border-slate-700 bg-[#172033] shadow-xl shadow-black/25;
+}
+
+.surface-panel{
+  @apply rounded-[28px] border border-slate-800 bg-[linear-gradient(180deg,rgba(17,24,39,0.96),rgba(11,15,26,0.94))] shadow-[0_24px_70px_rgba(0,0,0,0.32)];
+}
+
+.surface-card{
+  @apply rounded-[24px] border border-slate-800 bg-[#111827] shadow-[0_18px_45px_rgba(0,0,0,0.24)] transition-all duration-200;
+}
+
+.surface-card:hover{
+  @apply -translate-y-1 scale-[1.01] border-slate-700 bg-[#172033];
+}
+
+.surface-stat{
+  @apply rounded-2xl border border-slate-800 bg-[#0F172A] p-4;
 }
 
 }

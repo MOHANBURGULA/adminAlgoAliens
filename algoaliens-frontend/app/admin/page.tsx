@@ -10,5 +10,9 @@ export default function AdminIndexPage() {
     router.replace("/admin/dashboard")
   }, [router])
 
-  return null
+  return (
+    <div className="flex min-h-[50vh] items-center justify-center text-gray-300">
+      Redirecting to admin dashboard...
+    </div>
+  )
 }

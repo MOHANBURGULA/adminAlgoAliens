@@ -1,0 +1,237 @@
+# AlgoAliens required dependencies
+# Note: this project uses npm, not pip.
+
+# Frontend runtime dependencies: algoaliens-frontend
+@fontsource/poppins
+- Use: Loads the Poppins font used by the frontend UI.
+
+@monaco-editor/react
+- Use: Embeds the Monaco code editor in React pages.
+
+@tanstack/react-query
+- Use: Manages async server-state fetching and caching in the frontend.
+
+axios
+- Use: Sends HTTP requests from the frontend to backend APIs.
+
+class-variance-authority
+- Use: Helps build reusable styled component variants.
+
+clsx
+- Use: Combines conditional CSS class names.
+
+framer-motion
+- Use: Adds animations and motion effects in the frontend.
+
+lucide-react
+- Use: Provides icon components used across the UI.
+
+next
+- Use: Runs the Next.js frontend framework.
+
+next-auth
+- Use: Handles Google authentication and frontend session management.
+
+radix-ui
+- Use: Provides accessible UI primitives for frontend components.
+
+react
+- Use: Core library for building the frontend UI.
+
+react-dom
+- Use: Renders React components in the browser.
+
+react-hot-toast
+- Use: Shows toast notifications in the frontend.
+
+recharts
+- Use: Renders charts and dashboard visualizations.
+
+tailwind-merge
+- Use: Merges Tailwind CSS classes safely.
+
+zustand
+- Use: Manages lightweight frontend state.
+
+# Frontend dev dependencies: algoaliens-frontend
+@types/node
+- Use: TypeScript types for Node.js in the frontend project.
+
+@types/react
+- Use: TypeScript types for React.
+
+@types/react-dom
+- Use: TypeScript types for React DOM.
+
+autoprefixer
+- Use: Adds vendor prefixes during CSS build.
+
+eslint
+- Use: Lints frontend code.
+
+eslint-config-next
+- Use: Next.js ESLint configuration rules.
+
+postcss
+- Use: Processes CSS in the frontend build.
+
+shadcn
+- Use: Supports shadcn/ui component tooling.
+
+tailwindcss
+- Use: Utility-first CSS framework for frontend styling.
+
+tw-animate-css
+- Use: Adds animation utilities for Tailwind-based UI.
+
+typescript
+- Use: Enables TypeScript support in the frontend.
+
+# Backend runtime dependencies: edutech_complete
+@aws-sdk/client-s3
+- Use: Connects backend file features to S3-compatible storage.
+
+@aws-sdk/s3-request-presigner
+- Use: Generates signed upload/download URLs for storage access.
+
+@nestjs/common
+- Use: Core NestJS decorators, utilities, and HTTP features.
+
+@nestjs/config
+- Use: Loads and manages environment configuration in the backend.
+
+@nestjs/core
+- Use: Core NestJS application runtime.
+
+@nestjs/jwt
+- Use: Creates and verifies JWT tokens for authentication and password reset.
+
+@nestjs/passport
+- Use: Integrates Passport authentication with NestJS.
+
+@nestjs/platform-express
+- Use: Runs NestJS on the Express platform.
+
+@nestjs/typeorm
+- Use: Connects NestJS services/controllers with TypeORM.
+
+@types/multer
+- Use: TypeScript types for Multer file upload handling.
+
+@types/uuid
+- Use: TypeScript types for UUID usage.
+
+bcrypt
+- Use: Hashes and verifies passwords securely.
+
+dotenv
+- Use: Loads backend environment variables from .env files.
+
+ioredis
+- Use: Connects backend features to Redis when needed.
+
+multer
+- Use: Handles multipart file uploads in the backend.
+
+nodemailer
+- Use: Sends password reset emails from the backend.
+
+openai
+- Use: Powers backend AI-related features.
+
+passport
+- Use: Base authentication middleware used by NestJS auth guards.
+
+passport-jwt
+- Use: Validates JWT bearer tokens in protected backend routes.
+
+pg
+- Use: PostgreSQL driver for the backend database.
+
+reflect-metadata
+- Use: Required metadata support for decorators in NestJS and TypeORM.
+
+rxjs
+- Use: Reactive utilities used by NestJS internals and services.
+
+typeorm
+- Use: ORM for PostgreSQL entities and database access.
+
+uuid
+- Use: Generates unique identifiers where needed.
+
+# Backend dev dependencies: edutech_complete
+@eslint/eslintrc
+- Use: ESLint configuration compatibility support.
+
+@eslint/js
+- Use: Base ESLint JavaScript rules package.
+
+@nestjs/cli
+- Use: CLI for building and running the NestJS backend.
+
+@nestjs/schematics
+- Use: NestJS code generation support.
+
+@nestjs/testing
+- Use: Testing utilities for NestJS modules and services.
+
+@types/express
+- Use: TypeScript types for Express.
+
+@types/jest
+- Use: TypeScript types for Jest tests.
+
+@types/node
+- Use: TypeScript types for Node.js in the backend project.
+
+@types/nodemailer
+- Use: TypeScript types for Nodemailer.
+
+@types/passport-jwt
+- Use: TypeScript types for passport-jwt.
+
+@types/supertest
+- Use: TypeScript types for Supertest.
+
+eslint
+- Use: Lints backend code.
+
+eslint-config-prettier
+- Use: Disables ESLint rules that conflict with Prettier.
+
+eslint-plugin-prettier
+- Use: Runs Prettier formatting checks through ESLint.
+
+globals
+- Use: Provides shared global variable definitions for linting.
+
+jest
+- Use: Runs backend tests.
+
+prettier
+- Use: Formats backend code.
+
+source-map-support
+- Use: Improves stack traces for compiled backend code.
+
+supertest
+- Use: Tests backend HTTP endpoints.
+
+ts-jest
+- Use: Runs Jest tests for TypeScript code.
+
+ts-loader
+- Use: Handles TypeScript loading in build tooling.
+
+ts-node
+- Use: Runs TypeScript directly in Node during development/testing.
+
+tsconfig-paths
+- Use: Resolves TypeScript path aliases at runtime.
+
+typescript
+- Use: Enables TypeScript support in the backend.
+
+typescript-eslint
+- Use: TypeScript-aware ESLint tooling.
