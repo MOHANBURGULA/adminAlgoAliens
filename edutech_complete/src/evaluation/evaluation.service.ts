@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
-import { FinalQuizService } from '../final-quiz/final-quiz.service'
+import { ActivityService } from '../activity/activity.service'
 import { CacheKeys, MetricNames } from '../redis/cache.helpers'
 import { RedisMetricsService } from '../redis/redis-metrics.service'
 import { RedisService } from '../redis/redis.service'
@@ -15,7 +15,7 @@ export class EvaluationService {
   constructor(
     @InjectRepository(Evaluation)
     private readonly evaluationRepository: Repository<Evaluation>,
-    private readonly finalQuizService: FinalQuizService,
+    private readonly activityService: ActivityService,
     private readonly redisService: RedisService,
     private readonly redisMetricsService: RedisMetricsService,
     private readonly videoProcessingQueueService: VideoProcessingQueueService,
@@ -23,9 +23,15 @@ export class EvaluationService {
   ) {}
 
   async startEvaluation(userId: number, courseId: number, videoKey: string) {
-    const finalPassed = await this.finalQuizService.hasPassed(userId, courseId)
-    if (!finalPassed) {
-      throw new BadRequestException('You must pass the final quiz (80%) before submitting a video.')
+    const hasQualifiedActivity = await this.activityService.hasQualifiedActivityScore(
+      userId,
+      courseId,
+      60,
+    )
+    if (!hasQualifiedActivity) {
+      throw new BadRequestException(
+        'You must score at least 60% in a course activity before submitting a video.',
+      )
     }
 
     const evaluation = this.evaluationRepository.create({

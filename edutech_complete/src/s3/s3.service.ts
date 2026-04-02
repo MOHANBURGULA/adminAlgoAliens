@@ -31,16 +31,35 @@ export class S3Service {
 
   // Upload a file (used for ZIP files and videos from backend)
   async uploadFile(buffer: Buffer, originalName: string, mimeType: string): Promise<string> {
-    const key = `${uuidv4()}-${originalName}`
+    const uploaded = await this.uploadFileAtPath('', buffer, originalName, mimeType)
+    return uploaded.fileUrl
+  }
 
-    await this.client.send(new PutObjectCommand({
-      Bucket: this.bucket,
-      Key: key,
-      Body: buffer,
-      ContentType: mimeType
-    }))
+  async uploadFileAtPath(
+    prefix: string,
+    buffer: Buffer,
+    originalName: string,
+    mimeType: string,
+  ): Promise<{ key: string; fileUrl: string }> {
+    const sanitizedPrefix = prefix.trim().replace(/^\/+|\/+$/g, '')
+    const safeName = originalName.replace(/\s+/g, '-')
+    const key = sanitizedPrefix
+      ? `${sanitizedPrefix}/${uuidv4()}-${safeName}`
+      : `${uuidv4()}-${safeName}`
 
-    return `${process.env.S3_ENDPOINT}/${this.bucket}/${key}`
+    await this.client.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        Body: buffer,
+        ContentType: mimeType,
+      }),
+    )
+
+    return {
+      key,
+      fileUrl: this.getPublicUrl(key),
+    }
   }
 
   // List all files in the bucket
@@ -84,6 +103,11 @@ export class S3Service {
     const uploadUrl = await getSignedUrl(this.client, command, { expiresIn: 3600 })
 
     return { uploadUrl, key }
+  }
+
+  getPublicUrl(key: string) {
+    const endpoint = (process.env.S3_ENDPOINT || '').replace(/\/+$/, '')
+    return `${endpoint}/${this.bucket}/${key}`
   }
 
 }

@@ -5,10 +5,17 @@ import { useRouter } from "next/navigation"
 import toast from "react-hot-toast"
 import { clearAuthSession } from "@/lib/auth"
 import { apiClient } from "@/lib/axios"
+import { getApiErrorMessage } from "@/lib/http"
+
+type ProfileSetupFormData = {
+  experienceLevel: string
+  goal: string
+  interest: string
+}
 
 export default function ProfileSetup() {
   const router = useRouter()
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ProfileSetupFormData>({
     experienceLevel: "",
     interest: "",
     goal: "",
@@ -19,8 +26,13 @@ export default function ProfileSetup() {
       try {
         await apiClient.get("/api/users/profile")
         router.replace("/dashboard")
-      } catch (error: any) {
-        if (error?.response?.status === 401) {
+      } catch (error: unknown) {
+        if (
+          typeof error === "object" &&
+          error !== null &&
+          "response" in error &&
+          (error as { response?: { status?: number } }).response?.status === 401
+        ) {
           clearAuthSession()
           router.replace("/signin")
         }
@@ -30,7 +42,7 @@ export default function ProfileSetup() {
     void checkProfile()
   }, [router])
 
-  const handleSelect = (field: string, value: string) => {
+  const handleSelect = (field: keyof ProfileSetupFormData, value: string) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
@@ -57,16 +69,19 @@ export default function ProfileSetup() {
 
       toast.success("Profile setup completed!")
       router.replace("/dashboard")
-    } catch (error: any) {
-      if (error?.response?.status === 401) {
+    } catch (error: unknown) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        (error as { response?: { status?: number } }).response?.status === 401
+      ) {
         clearAuthSession()
         router.replace("/signin")
         return
       }
 
-      toast.error(
-        error.response?.data?.message || "Failed to save profile",
-      )
+      toast.error(getApiErrorMessage(error, "Failed to save profile"))
     }
   }
 

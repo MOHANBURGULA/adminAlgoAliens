@@ -19,6 +19,9 @@ import { DashboardModule } from './dashboard/dashboard.module'
 import { LeaderboardModule } from './leaderboard/leaderboard.module'
 import { MailModule } from './mail/mail.module'
 import { RedisModule } from './redis/redis.module'
+import { ActivityModule } from './activity/activity.module'
+import { ExecutionModule } from './execution/execution.module'
+import { PdfModule } from './pdf/pdf.module'
 
 @Module({
   imports: [
@@ -55,7 +58,10 @@ import { RedisModule } from './redis/redis.module'
     AdminModule,
     DashboardModule,
     LeaderboardModule,
-    MailModule
+    MailModule,
+    ExecutionModule,
+    PdfModule,
+    ActivityModule,
   ],
 })
 export class AppModule {}

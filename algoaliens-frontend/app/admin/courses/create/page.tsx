@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import toast from "react-hot-toast"
 import { apiClient } from "@/lib/axios"
+import { getApiErrorMessage } from "@/lib/http"
 
 export default function AdminCreateCoursePage() {
   const router = useRouter()
@@ -24,8 +25,8 @@ export default function AdminCreateCoursePage() {
 
       toast.success("Course created")
       router.replace("/admin/courses")
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Unable to create course.")
+    } catch (error: unknown) {
+      toast.error(getApiErrorMessage(error, "Unable to create course."))
     } finally {
       setSubmitting(false)
     }

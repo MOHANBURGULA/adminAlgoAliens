@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common'
 import { TypeOrmModule } from '@nestjs/typeorm'
+import { ActivityModule } from '../activity/activity.module'
 import { CertificatesModule } from '../certificates/certificates.module'
-import { FinalQuizModule } from '../final-quiz/final-quiz.module'
 import { OpenAiModule } from '../openai/openai.module'
 import { QuestionsModule } from '../questions/questions.module'
 import { S3Module } from '../s3/s3.module'
@@ -16,7 +16,7 @@ import { VideoProcessingQueueService } from './video-processing.queue'
     TypeOrmModule.forFeature([Evaluation]),
     OpenAiModule,
     QuestionsModule,
-    FinalQuizModule,
+    ActivityModule,
     CertificatesModule,
     S3Module,
   ],

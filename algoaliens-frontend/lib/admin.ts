@@ -1,6 +1,11 @@
 "use client"
 
 import { apiClient } from "./axios"
+import type {
+  ActivityContent,
+  ActivityType,
+  ModuleActivity,
+} from "./learning"
 
 export type AdminCourse = {
   id: number
@@ -27,6 +32,26 @@ export type AdminQuestion = {
   options: string[]
   correctOptionIndex: number
   expectedAnswer?: string
+}
+
+export type AdminModuleDocument = {
+  id: number
+  moduleId: number
+  label: string
+  title: string
+  fileUrl: string
+  storageKey?:
+    | {
+        bucket?: string
+        key: string
+        provider?: string
+      }
+    | string
+    | null
+  parseStatus?: string | null
+  parseError?: string | null
+  pageCount?: number | null
+  createdAt?: string
 }
 
 export async function uploadBlobWithSignedUrl(
@@ -56,6 +81,45 @@ export async function uploadBlobWithSignedUrl(
     key,
     fileUrl: uploadUrl.split("?")[0],
   }
+}
+
+export async function uploadModulePdfDocument(payload: {
+  moduleId: number
+  label: string
+  title: string
+  file: File
+}) {
+  const formData = new FormData()
+  formData.append("moduleId", String(payload.moduleId))
+  formData.append("label", payload.label)
+  formData.append("title", payload.title)
+  formData.append("file", payload.file)
+
+  const response = await apiClient.post<AdminModuleDocument>(
+    "/api/admin/modules/documents/upload",
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    },
+  )
+
+  return response.data
+}
+
+export async function fetchAdminModuleActivities(moduleId: number) {
+  const response = await apiClient.get<ModuleActivity[]>(`/api/activity/${moduleId}`)
+  return response.data
+}
+
+export async function createAdminActivity(payload: {
+  moduleId: number
+  activityType: ActivityType
+  content: ActivityContent
+}) {
+  const response = await apiClient.post<ModuleActivity>("/api/admin/activity", payload)
+  return response.data
 }
 
 export function createSimplePdfBlob(title: string) {

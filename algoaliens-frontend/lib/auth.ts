@@ -12,10 +12,24 @@ export type StoredUser = {
   role?: string
 }
 
+function getBrowserStorage() {
+  if (typeof window === "undefined") {
+    return null
+  }
+
+  return window.localStorage
+}
+
 function removeLegacyAuthKeys() {
-  localStorage.removeItem("adminToken")
-  localStorage.removeItem("adminUser")
-  localStorage.removeItem("profileSetup")
+  const storage = getBrowserStorage()
+
+  if (!storage) {
+    return
+  }
+
+  storage.removeItem("adminToken")
+  storage.removeItem("adminUser")
+  storage.removeItem("profileSetup")
 }
 
 function parseStoredUser(rawUser: Nullable<string>) {
@@ -31,11 +45,11 @@ function parseStoredUser(rawUser: Nullable<string>) {
 }
 
 export function getStoredToken() {
-  return localStorage.getItem(USER_TOKEN_KEY)
+  return getBrowserStorage()?.getItem(USER_TOKEN_KEY) || null
 }
 
 export function getStoredUser() {
-  return parseStoredUser(localStorage.getItem(USER_KEY))
+  return parseStoredUser(getBrowserStorage()?.getItem(USER_KEY) || null)
 }
 
 export function isAuthenticated() {
@@ -47,8 +61,14 @@ export function isAdminUser(user?: Nullable<StoredUser>) {
 }
 
 export function storeAuthSession(token: string, user: StoredUser) {
-  localStorage.setItem(USER_TOKEN_KEY, token)
-  localStorage.setItem(USER_KEY, JSON.stringify(user))
+  const storage = getBrowserStorage()
+
+  if (!storage) {
+    return
+  }
+
+  storage.setItem(USER_TOKEN_KEY, token)
+  storage.setItem(USER_KEY, JSON.stringify(user))
   removeLegacyAuthKeys()
 
   console.debug("[auth] stored session", {
@@ -63,8 +83,14 @@ export function storeAdminSession(token: string, user: StoredUser) {
 }
 
 export function clearAuthSession() {
-  localStorage.removeItem(USER_TOKEN_KEY)
-  localStorage.removeItem(USER_KEY)
+  const storage = getBrowserStorage()
+
+  if (!storage) {
+    return
+  }
+
+  storage.removeItem(USER_TOKEN_KEY)
+  storage.removeItem(USER_KEY)
   removeLegacyAuthKeys()
 }
 

@@ -3,6 +3,7 @@
 import { useState } from "react"
 import toast from "react-hot-toast"
 import { seedDsaCourse } from "@/lib/admin"
+import { getApiErrorMessage } from "@/lib/http"
 
 export default function AdminSeedPage() {
   const [running, setRunning] = useState(false)
@@ -14,8 +15,8 @@ export default function AdminSeedPage() {
       const course = await seedDsaCourse()
       setResult(`Seed complete for course ${course.title} (#${course.id}).`)
       toast.success("DSA seed flow completed")
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || error.message || "Unable to seed data.")
+    } catch (error: unknown) {
+      toast.error(getApiErrorMessage(error, "Unable to seed data."))
     } finally {
       setRunning(false)
     }

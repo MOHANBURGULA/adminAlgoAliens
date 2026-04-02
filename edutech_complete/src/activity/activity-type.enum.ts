@@ -1,0 +1,6 @@
+export enum ActivityType {
+  SQL_DEBUGGING = 'SQL_DEBUGGING',
+  CODE_SNIPPET = 'CODE_SNIPPET',
+  ANALYSIS = 'ANALYSIS',
+  QUIZ = 'QUIZ',
+}

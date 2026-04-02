@@ -19,8 +19,11 @@ import {
   Trophy,
   UploadCloud,
 } from "lucide-react"
+import { ActivityRunner } from "@/components/learner/ActivityRunner"
+import { InteractivePdfViewer } from "@/components/learner/InteractivePdfViewer"
 import ProgressBar from "@/components/dashboard/ProgressBar"
 import { LeaveCourseModal } from "@/components/courses/LeaveCourseModal"
+import { FeatureErrorBoundary } from "@/components/ui/FeatureErrorBoundary"
 import { isAuthenticated } from "@/lib/auth"
 import { getApiErrorMessage, isAxiosStatus } from "@/lib/http"
 import {
@@ -33,10 +36,12 @@ import {
   fetchEvaluationAttempts,
   fetchFinalQuizAttempts,
   fetchFinalQuizQuestions,
+  fetchModuleActivities,
   fetchModuleDocuments,
   fetchModuleProgress,
   fetchModuleQuestions,
   fetchProjects,
+  fetchVideoUnlockEligibility,
   fetchVideos,
   formatDifficulty,
   getFinalEvaluationModule,
@@ -48,6 +53,7 @@ import {
   type Enrollment,
   type EvaluationAttempt,
   type FinalQuizAttempt,
+  type ModuleActivity,
   type ModuleDocument,
   type ModuleProgress,
   type ProjectSubmission,
@@ -247,6 +253,8 @@ export default function CoursePage() {
   const router = useRouter()
   const courseId = Number(params?.courseId)
   const progressSyncRef = useRef(false)
+  const [authReady, setAuthReady] = useState(false)
+  const [hasAuthSession, setHasAuthSession] = useState(false)
   const [course, setCourse] = useState<Course | null>(null)
   const [modules, setModules] = useState<CourseModule[]>([])
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null)
@@ -256,6 +264,7 @@ export default function CoursePage() {
   const [evaluations, setEvaluations] = useState<EvaluationAttempt[]>([])
   const [finalQuizAttempts, setFinalQuizAttempts] = useState<FinalQuizAttempt[]>([])
   const [documentsByModule, setDocumentsByModule] = useState<Record<number, ModuleDocument[]>>({})
+  const [activitiesByModule, setActivitiesByModule] = useState<Record<number, ModuleActivity[]>>({})
   const [questionsByModule, setQuestionsByModule] = useState<Record<number, Question[]>>({})
   const [answersByModule, setAnswersByModule] = useState<Record<number, Record<number, number>>>({})
   const [finalQuestions, setFinalQuestions] = useState<Question[]>([])
@@ -270,8 +279,24 @@ export default function CoursePage() {
   const [enrolling, setEnrolling] = useState(false)
   const [submittingModuleId, setSubmittingModuleId] = useState<number | null>(null)
   const [submittingFinalQuizState, setSubmittingFinalQuizState] = useState(false)
+  const [videoEligibility, setVideoEligibility] = useState<{
+    eligible: boolean
+    minimumScore: number
+  } | null>(null)
 
-  const hasAuthSession = isAuthenticated()
+  useEffect(() => {
+    const syncAuthState = () => {
+      setHasAuthSession(isAuthenticated())
+      setAuthReady(true)
+    }
+
+    syncAuthState()
+    window.addEventListener("storage", syncAuthState)
+
+    return () => {
+      window.removeEventListener("storage", syncAuthState)
+    }
+  }, [])
 
   const loadCourseState = useCallback(async () => {
     const [
@@ -283,6 +308,7 @@ export default function CoursePage() {
       projectsResult,
       videosResult,
       evaluationsResult,
+      videoEligibilityResult,
     ] = await Promise.allSettled([
       fetchCourse(courseId),
       fetchCourseModules(courseId),
@@ -292,6 +318,7 @@ export default function CoursePage() {
       fetchProjects(),
       fetchVideos(),
       fetchEvaluationAttempts(courseId),
+      fetchVideoUnlockEligibility(courseId),
     ])
 
     if (courseResult.status === "rejected") throw courseResult.reason
@@ -308,6 +335,11 @@ export default function CoursePage() {
     setProjects(projectsResult.status === "fulfilled" ? projectsResult.value : [])
     setVideos(videosResult.status === "fulfilled" ? videosResult.value : [])
     setEvaluations(evaluationsResult.status === "fulfilled" ? evaluationsResult.value : [])
+    setVideoEligibility(
+      videoEligibilityResult.status === "fulfilled"
+        ? videoEligibilityResult.value
+        : { eligible: false, minimumScore: 60 },
+    )
   }, [courseId])
 
   useEffect(() => {
@@ -317,8 +349,13 @@ export default function CoursePage() {
       return
     }
 
+    if (!authReady) {
+      return
+    }
+
     if (!hasAuthSession) {
       router.replace("/signin")
+      setLoading(false)
       return
     }
 
@@ -349,7 +386,7 @@ export default function CoursePage() {
     return () => {
       cancelled = true
     }
-  }, [courseId, hasAuthSession, loadCourseState, router])
+  }, [authReady, courseId, hasAuthSession, loadCourseState, router])
 
   const learningModules = useMemo(
     () => buildLearningModules(courseId, modules),
@@ -407,6 +444,7 @@ export default function CoursePage() {
     return videos.find((video) => video.videoUrl === latestEvaluation.videoKey) || null
   }, [latestEvaluation, videos])
   const hasVideoSubmission = Boolean(latestEvaluation)
+  const videoUploadUnlocked = Boolean(videoEligibility?.eligible)
   const hasPassedEvaluation = courseEvaluations.some(
     (evaluation) => evaluation.status === "passed",
   )
@@ -499,16 +537,21 @@ export default function CoursePage() {
       return
     }
 
-    if (documentsByModule[module.id] && questionsByModule[module.id]) {
+    if (
+      documentsByModule[module.id] &&
+      questionsByModule[module.id] &&
+      activitiesByModule[module.id]
+    ) {
       return
     }
 
     setLoadingModules((current) => ({ ...current, [module.id]: true }))
     setModuleErrors((current) => ({ ...current, [module.id]: "" }))
 
-    const [documentsResult, questionsResult] = await Promise.allSettled([
+    const [documentsResult, questionsResult, activitiesResult] = await Promise.allSettled([
       fetchModuleDocuments(courseId, module.id),
       fetchModuleQuestions(courseId, module.id),
+      fetchModuleActivities(module.id),
     ])
 
     if (documentsResult.status === "fulfilled") {
@@ -525,12 +568,25 @@ export default function CoursePage() {
       }))
     }
 
-    if (documentsResult.status === "rejected" || questionsResult.status === "rejected") {
+    if (activitiesResult.status === "fulfilled") {
+      setActivitiesByModule((current) => ({
+        ...current,
+        [module.id]: activitiesResult.value,
+      }))
+    }
+
+    if (
+      documentsResult.status === "rejected" ||
+      questionsResult.status === "rejected" ||
+      activitiesResult.status === "rejected"
+    ) {
       const primaryError =
         documentsResult.status === "rejected"
           ? documentsResult.reason
           : questionsResult.status === "rejected"
             ? questionsResult.reason
+            : activitiesResult.status === "rejected"
+              ? activitiesResult.reason
             : null
 
       setModuleErrors((current) => ({
@@ -646,19 +702,19 @@ export default function CoursePage() {
     }
   }
 
+  if (!authReady || loading) {
+    return (
+      <div className="flex min-h-[55vh] items-center justify-center text-gray-300">
+        Loading course experience...
+      </div>
+    )
+  }
+
   if (!hasAuthSession) {
     return (
       <div className="mx-auto flex min-h-[55vh] max-w-3xl items-center justify-center rounded-[32px] border border-white/10 bg-[#0B0518]/80 p-8 text-center text-gray-300">
         Redirecting you to sign in so we can load the live module progress for this
         course.
-      </div>
-    )
-  }
-
-  if (loading) {
-    return (
-      <div className="flex min-h-[55vh] items-center justify-center text-gray-300">
-        Loading course experience...
       </div>
     )
   }
@@ -802,8 +858,12 @@ export default function CoursePage() {
               ? finalEvaluationProgress
               : moduleCardProgress(isCompleted, isUnlocked)
             const moduleDocuments = documentsByModule[module.id] || []
+            const moduleActivities = activitiesByModule[module.id] || []
             const stageDocuments = bucketDocuments(moduleDocuments)
             const moduleQuestions = questionsByModule[module.id] || []
+            const hasInteractiveTheory = Boolean(
+              stageDocuments.theory?.parsedContent?.sections?.length,
+            )
             const isOpen = openModuleId === module.id
             const isLoadingResources = loadingModules[module.id]
             const moduleError = moduleErrors[module.id]
@@ -965,14 +1025,14 @@ export default function CoursePage() {
                         />
 
                         <StageRow
-                          actionDisabled={!finalQuizPassed}
+                          actionDisabled={!videoUploadUnlocked}
                           actionLabel={hasVideoSubmission ? "Continue" : "Upload"}
                           badgeLabel={
                             hasPassedEvaluation
                               ? "Approved"
                               : hasVideoSubmission
                                 ? "Under Review"
-                                : finalQuizPassed
+                                : videoUploadUnlocked
                                   ? "Ready"
                                   : "Locked"
                           }
@@ -981,7 +1041,7 @@ export default function CoursePage() {
                               ? "emerald"
                               : hasVideoSubmission
                                 ? "yellow"
-                                : finalQuizPassed
+                                : videoUploadUnlocked
                                   ? "indigo"
                                   : "slate"
                           }
@@ -991,8 +1051,8 @@ export default function CoursePage() {
                                   latestEvaluation.feedback || "Analysis is still processing."
                                 }`
                               : relatedVideo
-                                ? `Latest upload: ${relatedVideo.title}. Submit it for evaluation after your final MCQ pass.`
-                                : "Upload your explanation video after the final MCQ test is passed."
+                                ? `Latest upload: ${relatedVideo.title}. Your activity score already qualifies you for video review.`
+                                : `Unlocks once you score at least ${videoEligibility?.minimumScore || 60}% in a course activity.`
                           }
                           icon={UploadCloud}
                           onAction={() => router.push(`/upload?courseId=${courseId}`)}
@@ -1007,8 +1067,8 @@ export default function CoursePage() {
                             <div>
                               <h3 className="text-lg font-semibold text-white">Final Quiz</h3>
                               <p className="mt-1 text-sm text-gray-300">
-                                Passing score: 80%. Retries are allowed until you
-                                clear the threshold.
+                                Passing score: 80%. Video upload unlock is now tied to scoring
+                                at least 60% in a course activity.
                               </p>
                             </div>
                             <StageBadge
@@ -1095,15 +1155,27 @@ export default function CoursePage() {
                       <div className="space-y-4">
                         <StageRow
                           actionDisabled={!Boolean(stageDocuments.theory)}
-                          actionHref={stageDocuments.theory?.fileUrl}
-                          actionLabel={isCompleted ? "Review" : "Open"}
+                          actionHref={
+                            hasInteractiveTheory ? undefined : stageDocuments.theory?.fileUrl
+                          }
+                          actionLabel={isCompleted ? "Review" : hasInteractiveTheory ? "Open Lesson" : "Open"}
                           badgeLabel={isCompleted ? "Completed" : "In Progress"}
                           badgeTone={isCompleted ? "emerald" : "purple"}
                           description={
-                            stageDocuments.theory?.title ||
-                            "Open the theory resource for this topic."
+                            hasInteractiveTheory
+                              ? "Read the parsed lesson inline with sidebar and carousel modes."
+                              : stageDocuments.theory?.title ||
+                                "Open the theory resource for this topic."
                           }
                           icon={BookOpen}
+                          onAction={
+                            hasInteractiveTheory
+                              ? () => {
+                                  const element = document.getElementById(`theory-section-${module.id}`)
+                                  element?.scrollIntoView({ behavior: "smooth", block: "start" })
+                                }
+                              : undefined
+                          }
                           title="Theory"
                         />
 
@@ -1112,14 +1184,18 @@ export default function CoursePage() {
                           badgeLabel={isCompleted ? "Completed" : "In Progress"}
                           badgeTone={isCompleted ? "emerald" : "orange"}
                           description={
-                            moduleQuestions.length > 0
-                              ? `${moduleQuestions.length} checkpoint questions are ready below.`
-                              : stageDocuments.activity?.title ||
-                                "Complete the module quiz below to unlock the next module."
+                            moduleActivities.length > 0
+                              ? `${moduleActivities.length} interactive activit${
+                                  moduleActivities.length === 1 ? "y" : "ies"
+                                } ready below.`
+                              : moduleQuestions.length > 0
+                                ? `${moduleQuestions.length} checkpoint questions are ready below.`
+                                : stageDocuments.activity?.title ||
+                                  "Complete the module quiz below to unlock the next module."
                           }
                           icon={Code2}
                           onAction={() => {
-                            const element = document.getElementById(`quiz-section-${module.id}`)
+                            const element = document.getElementById(`activity-section-${module.id}`)
                             element?.scrollIntoView({ behavior: "smooth", block: "start" })
                           }}
                           title="Activity"
@@ -1137,6 +1213,45 @@ export default function CoursePage() {
                           icon={PlayCircle}
                           title="Explanation Video"
                         />
+
+                        {stageDocuments.theory ? (
+                          <div id={`theory-section-${module.id}`}>
+                            <FeatureErrorBoundary fallbackMessage="The lesson viewer hit an issue. Open the original PDF instead.">
+                              <InteractivePdfViewer document={stageDocuments.theory} />
+                            </FeatureErrorBoundary>
+                          </div>
+                        ) : null}
+
+                        <section
+                          id={`activity-section-${module.id}`}
+                          className="rounded-[24px] border border-white/10 bg-[#12092A]/80 p-5"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                              <h3 className="text-lg font-semibold text-white">
+                                Interactive Activities
+                              </h3>
+                              <p className="mt-1 text-sm text-gray-300">
+                                Complete the module activity here. Scoring 60% or more on an
+                                activity unlocks explanation video uploads.
+                              </p>
+                            </div>
+                            <StageBadge
+                              label={
+                                moduleActivities.length > 0
+                                  ? `${moduleActivities.length} loaded`
+                                  : "Optional"
+                              }
+                              tone={moduleActivities.length > 0 ? "purple" : "slate"}
+                            />
+                          </div>
+
+                          <div className="mt-5">
+                            <FeatureErrorBoundary fallbackMessage="The activity runner hit an issue. Refresh and try again.">
+                              <ActivityRunner activities={moduleActivities} />
+                            </FeatureErrorBoundary>
+                          </div>
+                        </section>
 
                         <section
                           id={`quiz-section-${module.id}`}

@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
-import { useEffect, useMemo, useState } from "react"
+import { Suspense, useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { PlayCircle, Send, UploadCloud, Video } from "lucide-react"
 import { getApiErrorMessage } from "@/lib/http"
@@ -11,7 +11,7 @@ import {
   fetchCourse,
   fetchEnrollments,
   fetchEvaluationAttempts,
-  fetchFinalQuizAttempts,
+  fetchVideoUnlockEligibility,
   fetchVideos,
   submitEvaluation,
   type EvaluationAttempt,
@@ -36,7 +36,7 @@ function reviewTone(status: "approved" | "review" | "retry") {
   return "border-yellow-500/20 bg-yellow-500/10 text-yellow-100"
 }
 
-export default function UploadPage() {
+function UploadPageContent() {
   const searchParams = useSearchParams()
   const [courses, setCourses] = useState<CourseOption[]>([])
   const [selectedCourseId, setSelectedCourseId] = useState(
@@ -47,7 +47,10 @@ export default function UploadPage() {
   const [videoFile, setVideoFile] = useState<File | null>(null)
   const [videos, setVideos] = useState<UserVideo[]>([])
   const [evaluations, setEvaluations] = useState<EvaluationAttempt[]>([])
-  const [finalQuizPassed, setFinalQuizPassed] = useState(false)
+  const [videoEligibility, setVideoEligibility] = useState<{
+    eligible: boolean
+    minimumScore: number
+  } | null>(null)
   const [loading, setLoading] = useState(true)
   const [courseStatusLoading, setCourseStatusLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -105,7 +108,7 @@ export default function UploadPage() {
   useEffect(() => {
     if (!selectedCourseId) {
       setEvaluations([])
-      setFinalQuizPassed(false)
+      setVideoEligibility(null)
       return
     }
 
@@ -115,8 +118,8 @@ export default function UploadPage() {
       try {
         setCourseStatusLoading(true)
         const courseId = Number(selectedCourseId)
-        const [attempts, courseEvaluations] = await Promise.all([
-          fetchFinalQuizAttempts(courseId),
+        const [eligibility, courseEvaluations] = await Promise.all([
+          fetchVideoUnlockEligibility(courseId),
           fetchEvaluationAttempts(courseId),
         ])
 
@@ -124,7 +127,7 @@ export default function UploadPage() {
           return
         }
 
-        setFinalQuizPassed(attempts.some((attempt) => attempt.passed))
+        setVideoEligibility(eligibility)
         setEvaluations(
           [...courseEvaluations].sort(
             (left, right) =>
@@ -187,8 +190,10 @@ export default function UploadPage() {
       return
     }
 
-    if (!finalQuizPassed) {
-      toast.error("Pass the final MCQ test before uploading your explanation video.")
+    if (!videoEligibility?.eligible) {
+      toast.error(
+        `Score at least ${videoEligibility?.minimumScore || 60}% in a course activity before uploading your explanation video.`,
+      )
       return
     }
 
@@ -197,6 +202,7 @@ export default function UploadPage() {
       const upload = await uploadExplanationVideo(videoFile)
 
       await createVideoRecord({
+        courseId: Number(selectedCourseId),
         title: title.trim(),
         description: description.trim(),
         videoUrl: upload.key,
@@ -263,10 +269,11 @@ export default function UploadPage() {
         ) : null}
       </div>
 
-      {!finalQuizPassed && selectedCourseId ? (
+      {!videoEligibility?.eligible && selectedCourseId ? (
         <div className="rounded-2xl border border-orange-500/20 bg-orange-500/10 p-4 text-sm text-orange-100">
-          Pass the final MCQ test in {selectedCourse?.title || "this course"} before
-          uploading your explanation video.
+          Score at least {videoEligibility?.minimumScore || 60}% in an activity for{" "}
+          {selectedCourse?.title || "this course"} before uploading your explanation
+          video.
         </div>
       ) : null}
 
@@ -319,7 +326,7 @@ export default function UploadPage() {
             type="button"
             onClick={() => void handleSubmit()}
             disabled={
-              submitting || courseStatusLoading || !selectedCourseId || !finalQuizPassed
+              submitting || courseStatusLoading || !selectedCourseId || !videoEligibility?.eligible
             }
             className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-700 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
           >
@@ -425,5 +432,19 @@ export default function UploadPage() {
         </div>
       </section>
     </div>
+  )
+}
+
+export default function UploadPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[50vh] items-center justify-center text-gray-300">
+          Loading video submissions...
+        </div>
+      }
+    >
+      <UploadPageContent />
+    </Suspense>
   )
 }

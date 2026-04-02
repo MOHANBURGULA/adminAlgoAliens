@@ -23,9 +23,15 @@ export default function ResetPasswordPage() {
 
     try {
       setSubmitting(true)
+      const token = params?.token
+
+      if (!token) {
+        toast.error("Reset token is missing.")
+        return
+      }
 
       const response = await apiClient.post("/api/auth/reset-password", {
-        token: params.token,
+        token,
         newPassword,
       })
 

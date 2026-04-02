@@ -16,6 +16,8 @@ import { CertificatesService } from '../certificates/certificates.service'
 import { S3Service } from '../s3/s3.service'
 import { CacheKeys } from '../redis/cache.helpers'
 import { RedisService } from '../redis/redis.service'
+import { Activity } from '../activity/activity.entity'
+import { ActivitySubmission } from '../activity/activity-submission.entity'
 
 @Injectable()
 export class AdminService {
@@ -53,6 +55,12 @@ export class AdminService {
 
     @InjectRepository(Course)
     private courseRepo: Repository<Course>,
+
+    @InjectRepository(Activity)
+    private activityRepo: Repository<Activity>,
+
+    @InjectRepository(ActivitySubmission)
+    private activitySubmissionRepo: Repository<ActivitySubmission>,
 
     private certificatesService: CertificatesService,
     private s3Service: S3Service,
@@ -235,11 +243,14 @@ export class AdminService {
 
   async deleteModule(id: number) {
     const existingModule = await this.moduleRepo.findOne({ where: { id } })
+    await this.activitySubmissionRepo.delete({ moduleId: id })
+    await this.activityRepo.delete({ moduleId: id })
     await this.documentRepo.delete({ moduleId: id })
     const result = await this.moduleRepo.delete(id)
 
     await this.redisService.del(
       CacheKeys.moduleDocuments(id),
+      CacheKeys.moduleActivities(id),
       ...(existingModule ? [CacheKeys.moduleQuestions(existingModule.courseId, id)] : []),
       ...(existingModule ? [CacheKeys.modulesCourse(existingModule.courseId)] : []),
     )
@@ -386,6 +397,8 @@ export class AdminService {
     const moduleIds = modules.map((module) => module.id)
 
     if (moduleIds.length > 0) {
+      await this.activitySubmissionRepo.delete({ moduleId: In(moduleIds) })
+      await this.activityRepo.delete({ moduleId: In(moduleIds) })
       await this.documentRepo.delete({ moduleId: In(moduleIds) })
     }
 
@@ -405,6 +418,7 @@ export class AdminService {
       CacheKeys.modulesCourse(id),
       CacheKeys.finalQuizQuestions(id),
       ...moduleIds.map((moduleId) => CacheKeys.moduleDocuments(moduleId)),
+      ...moduleIds.map((moduleId) => CacheKeys.moduleActivities(moduleId)),
       ...moduleIds.map((moduleId) => CacheKeys.moduleQuestions(id, moduleId)),
     )
 

@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { Suspense, useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { BookOpen, FileText, Github, Send, UploadCloud } from "lucide-react"
 import { getApiErrorMessage } from "@/lib/http"
@@ -33,7 +33,7 @@ function projectTone(status: "approved" | "pending" | "rejected") {
   return "border-yellow-500/20 bg-yellow-500/10 text-yellow-100"
 }
 
-export default function ProjectsPage() {
+function ProjectsPageContent() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const searchParams = useSearchParams()
   const [courses, setCourses] = useState<CourseOption[]>([])
@@ -355,5 +355,19 @@ export default function ProjectsPage() {
         </div>
       </section>
     </div>
+  )
+}
+
+export default function ProjectsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[50vh] items-center justify-center text-gray-300">
+          Loading project submissions...
+        </div>
+      }
+    >
+      <ProjectsPageContent />
+    </Suspense>
   )
 }

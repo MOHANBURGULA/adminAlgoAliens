@@ -51,6 +51,6 @@ export function getAverageProgress(values: Array<number | null | undefined>) {
     return 0
   }
 
-  const total = values.reduce((sum, current) => sum + clampProgress(current), 0)
+  const total = values.reduce<number>((sum, current) => sum + clampProgress(current), 0)
   return Math.round(total / values.length)
 }

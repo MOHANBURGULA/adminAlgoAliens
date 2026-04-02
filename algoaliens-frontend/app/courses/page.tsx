@@ -59,6 +59,7 @@ function getCourseCardTheme(difficulty: string) {
 
 export default function CoursesPage() {
   const router = useRouter()
+  const [authenticated, setAuthenticated] = useState(false)
   const [courses, setCourses] = useState<Course[]>([])
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
   const [profile, setProfile] = useState<UserProfile | null>(null)
@@ -67,7 +68,18 @@ export default function CoursesPage() {
   const [error, setError] = useState("")
   const [enrollingCourseId, setEnrollingCourseId] = useState<number | null>(null)
 
-  const authenticated = typeof window !== "undefined" && isAuthenticated()
+  useEffect(() => {
+    const syncAuthState = () => {
+      setAuthenticated(isAuthenticated())
+    }
+
+    syncAuthState()
+    window.addEventListener("storage", syncAuthState)
+
+    return () => {
+      window.removeEventListener("storage", syncAuthState)
+    }
+  }, [])
 
   useEffect(() => {
     let cancelled = false

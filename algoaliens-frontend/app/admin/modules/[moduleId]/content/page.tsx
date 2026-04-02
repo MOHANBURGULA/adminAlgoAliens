@@ -1,16 +1,23 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react"
 import { useParams, useSearchParams } from "next/navigation"
 import toast from "react-hot-toast"
 import { apiClient } from "@/lib/axios"
-import { AdminQuestion, uploadBlobWithSignedUrl } from "@/lib/admin"
+import {
+  AdminQuestion,
+  uploadModulePdfDocument,
+} from "@/lib/admin"
+import { AdminActivityBuilder } from "@/components/admin/content/AdminActivityBuilder"
+import { FeatureErrorBoundary } from "@/components/ui/FeatureErrorBoundary"
 
 type ModuleDocument = {
   id: number
   label: string
   title: string
   fileUrl: string
+  parseStatus?: string | null
+  pageCount?: number | null
 }
 
 type Module = {
@@ -28,7 +35,7 @@ function getErrorMessage(error: unknown, fallback: string) {
   return fallback
 }
 
-export default function AdminModuleContentPage() {
+function AdminModuleContentPageContent() {
   const params = useParams<{ moduleId: string }>()
   const searchParams = useSearchParams()
   const moduleId = Number(params?.moduleId || 0)
@@ -96,17 +103,11 @@ export default function AdminModuleContentPage() {
     }
 
     try {
-      const upload = await uploadBlobWithSignedUrl(
-        documentFile.name,
-        documentFile,
-        documentFile.type || "application/pdf",
-      )
-
-      await apiClient.post("/api/admin/modules/documents", {
+      await uploadModulePdfDocument({
         moduleId,
         label: documentLabel,
         title: documentTitle,
-        fileUrl: upload.fileUrl,
+        file: documentFile,
       })
 
       setDocumentFile(null)
@@ -163,8 +164,8 @@ export default function AdminModuleContentPage() {
           {module?.title || `Module #${moduleId}`} Content
         </h1>
         <p className="mt-2 text-sm text-gray-400">
-          Manage PDFs and quiz questions using existing admin APIs. Module tutorial
-          video content is not persisted by the current backend route set.
+          Manage parsed learning PDFs, activity-based content, and quiz checkpoints
+          for this module.
         </p>
       </div>
 
@@ -174,6 +175,10 @@ export default function AdminModuleContentPage() {
           className="rounded-2xl border border-purple-900/30 bg-[#0B0518] p-6"
         >
           <h2 className="text-xl font-semibold text-white">PDF Upload</h2>
+          <p className="mt-2 text-sm text-gray-400">
+            Upload through the backend so the PDF is parsed into interactive lesson
+            sections automatically.
+          </p>
           <div className="mt-5 space-y-4">
             <input
               value={documentLabel}
@@ -202,15 +207,25 @@ export default function AdminModuleContentPage() {
 
           <div className="mt-6 space-y-3">
             {documents.map((document) => (
-              <a
-                key={document.id}
-                href={document.fileUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="block rounded-xl bg-[#12092A] p-4 text-sm text-white hover:bg-[#1A0F32]"
-              >
-                {document.label} - {document.title}
-              </a>
+              <div key={document.id} className="rounded-xl bg-[#12092A] p-4 text-sm text-white">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <a
+                    href={document.fileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-medium hover:text-purple-200"
+                  >
+                    {document.label} - {document.title}
+                  </a>
+                  <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-gray-300">
+                    {document.parseStatus === "completed"
+                      ? `${document.pageCount || 0} pages parsed`
+                      : document.parseStatus === "failed"
+                        ? "Parse failed"
+                        : "Pending parse"}
+                  </span>
+                </div>
+              </div>
             ))}
           </div>
         </form>
@@ -278,6 +293,20 @@ export default function AdminModuleContentPage() {
           </div>
         </form>
       </div>
+
+      <FeatureErrorBoundary fallbackMessage="The activity builder hit an issue. Refresh and try again.">
+        <AdminActivityBuilder moduleId={moduleId} />
+      </FeatureErrorBoundary>
     </div>
+  )
+}
+
+export default function AdminModuleContentPage() {
+  return (
+    <Suspense
+      fallback={<div className="text-gray-300">Loading module content...</div>}
+    >
+      <AdminModuleContentPageContent />
+    </Suspense>
   )
 }

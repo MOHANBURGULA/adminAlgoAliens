@@ -15,13 +15,16 @@ import { Video } from '../videos/video.entity'
 import { Course } from '../courses/course.entity'
 import { CertificatesModule } from '../certificates/certificates.module'
 import { S3Module } from '../s3/s3.module'
+import { Activity } from '../activity/activity.entity'
+import { ActivitySubmission } from '../activity/activity-submission.entity'
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
       User, Enrollment, Evaluation,
       CourseModule, ModuleDocument, ModuleProgress,
-      Question, Certificate, Project, Video, Course
+      Question, Certificate, Project, Video, Course,
+      Activity, ActivitySubmission,
     ]),
     CertificatesModule,
     S3Module

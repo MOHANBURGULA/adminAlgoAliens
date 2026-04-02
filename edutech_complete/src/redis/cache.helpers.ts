@@ -6,6 +6,7 @@ export const CACHE_TTL_SECONDS = {
   profileUser: 300,
   modulesCourse: 600,
   moduleDocuments: 600,
+  moduleActivities: 300,
   moduleProgressUserCourse: 120,
   moduleQuestions: 600,
   finalQuizQuestions: 600,
@@ -30,6 +31,7 @@ export const CacheKeys = {
   profileUser: (userId: number) => `profile:user:${userId}`,
   modulesCourse: (courseId: number) => `modules:course:${courseId}`,
   moduleDocuments: (moduleId: number) => `module-documents:${moduleId}`,
+  moduleActivities: (moduleId: number) => `module-activities:${moduleId}`,
   moduleProgressUserCourse: (userId: number, courseId: number) =>
     `module-progress:user:${userId}:course:${courseId}`,
   moduleQuestions: (courseId: number, moduleId: number) =>

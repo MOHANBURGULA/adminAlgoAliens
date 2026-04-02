@@ -40,7 +40,82 @@ export type ModuleDocument = {
   label: string
   title: string
   fileUrl: string
+  storageKey?:
+    | {
+        bucket?: string
+        key: string
+        provider?: string
+      }
+    | string
+    | null
+  parseStatus?: string | null
+  parseError?: string | null
+  pageCount?: number | null
+  parsedContent?: ParsedPdfContent | null
   createdAt?: string
+}
+
+export type PdfBlock =
+  | {
+      type: "paragraph"
+      text: string
+    }
+  | {
+      type: "bullet-list"
+      items: string[]
+    }
+
+export type PdfSection = {
+  id: string
+  title: string
+  anchor: string
+  pageStart: number
+  blocks: PdfBlock[]
+}
+
+export type ParsedPdfContent = {
+  title: string
+  pageCount: number
+  wordCount: number
+  sectionCount: number
+  sections: PdfSection[]
+}
+
+export type ActivityType =
+  | "SQL_DEBUGGING"
+  | "CODE_SNIPPET"
+  | "ANALYSIS"
+  | "QUIZ"
+
+export type ActivityTestCase = {
+  input?: string
+  output?: string
+  isHidden?: boolean
+}
+
+export type ActivityChoice = {
+  label: string
+}
+
+export type ActivityContent = {
+  description: string
+  starterCode?: string
+  expectedOutput?: string
+  testCases?: ActivityTestCase[]
+  sqlSchema?: string
+  explanation?: string
+  language?: string
+  choices?: ActivityChoice[]
+  correctChoiceIndex?: number
+}
+
+export type ModuleActivity = {
+  id: number
+  moduleId: number
+  activityType: ActivityType
+  content: ActivityContent
+  createdAt: string
+  updatedAt: string
 }
 
 export type Question = {
@@ -270,6 +345,28 @@ export async function fetchModuleQuestions(courseId: number, moduleId: number) {
   return data
 }
 
+export async function fetchModuleActivities(moduleId: number) {
+  const { data } = await apiClient.get<ModuleActivity[]>(`/api/activity/${moduleId}`)
+  return data
+}
+
+export async function submitModuleActivity(payload: {
+  activityId: number
+  sourceCode?: string
+  language?: string
+  answer?: string
+  selectedOptionIndex?: number
+}) {
+  const { data } = await apiClient.post<{
+    activityId: number
+    activityType: ActivityType
+    submissionId: number
+    result: Record<string, unknown>
+  }>("/api/activity/submit", payload)
+
+  return data
+}
+
 export async function submitModuleQuiz(
   courseId: number,
   moduleId: number,
@@ -336,6 +433,7 @@ export async function fetchVideos() {
 }
 
 export async function createVideoRecord(payload: {
+  courseId: number
   title: string
   description: string
   videoUrl: string
@@ -371,6 +469,15 @@ export async function retryEvaluation(courseId: number, videoKey: string) {
 
 export async function fetchEvaluationStatus(evaluationId: number) {
   const { data } = await apiClient.get<EvaluationAttempt>(`/api/evaluation/${evaluationId}`)
+  return data
+}
+
+export async function fetchVideoUnlockEligibility(courseId: number) {
+  const { data } = await apiClient.get<{
+    eligible: boolean
+    minimumScore: number
+  }>(`/api/activity/course/${courseId}/video-eligibility`)
+
   return data
 }
 
