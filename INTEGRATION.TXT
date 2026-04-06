@@ -1,0 +1,459 @@
+ALGOALIENS ADMIN INTEGRATION SUMMARY
+===================================
+
+This file documents the major integration changes completed in this project.
+It is written as a readable handoff note for future development, testing, and
+connection with the user-side platform.
+
+
+1. PROJECT STRUCTURE
+--------------------
+
+The workspace currently contains:
+
+- admin-backend
+  NestJS backend for admin APIs, storage, moderation flows, analytics,
+  activities, theory resources, and execution endpoints.
+
+- admin-frontend
+  Next.js admin application, now also containing the current theory reader
+  route used for user-side testing inside this workspace.
+
+
+2. ENVIRONMENT-BASED CONFIGURATION
+----------------------------------
+
+Hardcoded URLs were removed from the main flows and replaced with environment
+variables where needed.
+
+Important backend env values:
+
+- FRONTEND_URL
+- ADMIN_FRONTEND_URL
+- MAX_VIDEO_REJECTIONS
+- JUDGE0_BASE_URL
+- MONGODB_EXECUTION_URI
+- MONGODB_EXECUTION_DATABASE
+- ADMIN_EMAIL
+- ADMIN_PASSWORD
+- ADMIN_ROLE
+
+Important frontend env usage:
+
+- API base URL handling moved through frontend env-backed helpers instead of
+  direct hardcoded localhost links.
+
+Result:
+
+- The admin project no longer depends on fixed local URLs in the main code path.
+- Frontend and backend targets can be changed from env files.
+
+
+3. NEXT.JS ROOT LAYOUT FIX
+--------------------------
+
+The admin frontend root layout was corrected so the app includes proper:
+
+- <html>
+- <body>
+
+Result:
+
+- The runtime error "Missing <html> and <body> tags in the root layout"
+  is resolved.
+- Admin pages render correctly again.
+
+
+4. ADMIN ACCESS SEED CONFIG
+---------------------------
+
+Bootstrap admin credentials were moved into backend env configuration instead
+of depending on hidden hardcoded values.
+
+Configured via:
+
+- ADMIN_EMAIL
+- ADMIN_PASSWORD
+- ADMIN_ROLE
+
+Result:
+
+- Admin bootstrap details are explicit and editable from env.
+
+
+5. USER MANAGEMENT SIMPLIFICATION
+---------------------------------
+
+The role-toggle action from the admin users page was removed as requested.
+
+Removed behavior:
+
+- "Make Admin"
+- "Make Student"
+
+Result:
+
+- The users page is now focused on viewing users instead of changing roles
+  directly from the table.
+
+
+6. CERTIFICATES PAGE STATUS
+---------------------------
+
+The certificates section was treated as not implemented for the requested flow.
+Certificate generation is expected to happen automatically after approval
+logic, not through a separate manual admin workflow.
+
+Result:
+
+- Certificate-first admin management was de-emphasized according to the
+  requested product behavior.
+
+Note:
+
+- The frontend route may still exist in the app tree, but the requested
+  product direction was documented and aligned around automatic generation
+  instead of manual admin handling.
+
+
+7. VIDEO REVIEW / REJECTION LIMIT
+---------------------------------
+
+The rejection limit for video review was made configurable and aligned to
+the requested behavior.
+
+Configured via:
+
+- MAX_VIDEO_REJECTIONS=4
+
+Result:
+
+- Users can resubmit video evaluations until the configured rejection limit
+  is reached.
+
+
+8. PROJECT REVIEW PAGE CLEANUP
+------------------------------
+
+The projects page was updated so user ID is not displayed as a primary admin
+surface detail.
+
+Result:
+
+- The project moderation view is cleaner and exposes less unnecessary internal
+  identifier noise.
+
+
+9. COURSE CATEGORY SYSTEM
+-------------------------
+
+Course management was updated from difficulty-oriented display to
+category-oriented organization.
+
+Implemented behavior:
+
+- Category entity added
+- Courses can be assigned to a category
+- Admin can create a category when creating a course
+- Admin can select an existing category for a course
+- Category selection is available in create and edit flows
+- Course listing supports filtering by category
+- Category dropdown UI was styled to match the requested dark design
+
+Result:
+
+- Courses can now be grouped under categories such as:
+  Algorithms, Core Engineering, Databases, Systems, SQL, Competitive Programming.
+
+
+10. DIFFICULTY FIELD REMOVAL
+----------------------------
+
+Difficulty was removed from the visible admin course flow as requested.
+
+Result:
+
+- Category became the main organizing concept.
+- The admin UI no longer centers course difficulty in the main course workflow.
+
+
+11. CATEGORY-WISE ANALYTICS
+---------------------------
+
+The analytics section was updated to support category-wise reporting.
+
+Implemented behavior:
+
+- Analytics can now be filtered by course category
+- Category-level counts are computed for courses, enrollments, and
+  certificates where applicable
+
+Result:
+
+- Admin analytics are more aligned with how courses are actually organized.
+
+
+12. LOCAL COMPILER / ACTIVITY BUILDER
+-------------------------------------
+
+The module content builder was upgraded into a dynamic interactive activity
+system.
+
+Supported activity types:
+
+- SQL Debugging
+- Coding
+- Analysis
+- Quiz
+
+Main builder behavior:
+
+- When admin changes the activity type, the correct editor opens automatically
+- Shared activity basics stay in one place
+- Type-specific fields only appear for the active mode
+- Existing saved activities can be edited and rendered correctly
+
+Reusable frontend components added:
+
+- ActivityTypeSelector
+- CodingEditor
+- SqlEditor
+- AnalysisEditor
+- QuizBuilder
+- TestCaseManager
+
+Result:
+
+- The activity builder is modular, cleaner, and production-oriented.
+
+
+13. MULTI-LANGUAGE EXECUTION SUPPORT
+------------------------------------
+
+The coding builder was extended to support multiple languages and multiple
+execution engines.
+
+Supported programming languages:
+
+- C
+- C++
+- Java
+- Python
+- JavaScript / Node.js
+- Go
+- Rust
+- Swift
+- R
+- Prolog
+
+Additional supported modes:
+
+- SQL
+- MongoDB / NoSQL simulation
+
+Execution behavior:
+
+- Judge0-based languages run through the local Judge0 machine setup
+- SQL uses backend execution handling
+- MongoDB uses backend execution handling
+
+Important implementation details:
+
+- Language map added
+- Starter code templates added for each language
+- Language dropdown auto-loads starter code
+- Editor preserves code per selected language where possible
+- Cleaner execution UI was added to reduce ambiguity
+
+Result:
+
+- The compiler/editor experience is closer to an online coding sandbox
+  rather than a plain text form.
+
+
+14. THEORY READER SYSTEM
+------------------------
+
+A production-style theory resource system was added.
+
+Admin upload support:
+
+- Upload PDF files
+- Upload Markdown files
+- Save file metadata in database
+
+Theory resource data saved:
+
+- id
+- module_id
+- title
+- file_url
+- file_type
+- created_at
+
+User-side theory reader support in the current workspace:
+
+- Route added for theory reading
+- File type detected automatically
+- PDF files render as a scrollable page-by-page reading view
+- Markdown files render as a styled reader layout
+
+PDF reader features:
+
+- All pages rendered vertically
+- Page count
+- Current page tracking
+- Zoom in / zoom out
+- Sticky toolbar
+- Reading progress
+- Continue from saved position
+
+Markdown reader features:
+
+- Markdown rendering with GFM support
+- Code block syntax highlighting
+- Search inside markdown
+- Responsive tables
+- Styled long-form reading layout
+
+Shared theory features:
+
+- Reading progress bar
+- Auto-save progress to backend
+- Bookmark current position
+- Fullscreen mode
+- Dark / light toggle
+- Estimated reading time
+- Mark as completed
+- Completion can unlock next stage through backend module progress logic
+
+Result:
+
+- Theory is no longer just a raw uploaded file link.
+- The platform now has a proper reading experience for module theory content.
+
+
+15. THEORY BACKEND APIS
+-----------------------
+
+Added theory endpoints:
+
+- POST /api/theory/upload
+- GET /api/theory/:moduleId
+- POST /api/theory/progress
+- GET /api/theory/progress/:moduleId/:userId
+
+Progress tracks:
+
+- user_id
+- module_id
+- scroll_position
+- percentage_completed
+- last_page
+- bookmark position
+- completion state
+- updated_at
+
+Result:
+
+- Theory reading can persist and resume instead of restarting every time.
+
+
+16. DATABASE / SCHEMA COMPATIBILITY FIXES
+-----------------------------------------
+
+The backend encountered crashes because the database schema lagged behind the
+updated entity definitions.
+
+Fixed items:
+
+- Course.categoryId column typing corrected
+- Missing course columns patched into existing databases:
+  - description
+  - keywords
+  - categoryId
+- course_categories table compatibility handling added
+- theory schema SQL file added
+
+Additional compatibility safeguard:
+
+- A startup schema compatibility service now patches older course schemas
+  automatically on backend boot.
+
+Result:
+
+- Older local databases can continue to run without immediately failing when
+  new course/category fields are introduced.
+
+
+17. BUILD / TOOLING STABILITY
+-----------------------------
+
+Stability work completed:
+
+- Backend dist/main generation issue fixed by adjusting build behavior
+- Frontend type issues in the activity builder were corrected
+- Backend and frontend builds were revalidated after the changes
+
+Result:
+
+- Both projects build successfully with the integrated feature set.
+
+
+18. REDIS NOTE
+--------------
+
+Redis warnings like:
+
+- AggregateError
+- connection closed
+- reconnect skipped
+
+are treated separately from the feature integrations above.
+
+Current meaning:
+
+- The app can still continue without cache if Redis is unavailable
+- These warnings do not represent the theory or course integration crashing
+
+
+19. CURRENT INTEGRATION NOTE ABOUT THE USER-SIDE PROJECT
+--------------------------------------------------------
+
+The original request mentioned connecting this admin system to a separate
+user-side frontend that shares the same database while keeping admin code
+isolated.
+
+Important note:
+
+- In the current workspace, only the admin project is present
+- Because of that, user-facing theory reader work was implemented inside the
+  current Next.js project as an accessible theory route for end-to-end testing
+
+Future connection path:
+
+- The same backend APIs and database structures can be consumed by the actual
+  learner-side frontend once that repository is available in the workspace
+
+
+20. FINAL STATUS
+----------------
+
+Major requested integrations completed:
+
+- Environment-based configuration
+- Category-based course flow
+- Category analytics
+- User role-action cleanup
+- Activity builder with multiple dynamic activity types
+- Local compiler integration path
+- Theory reader system with progress tracking
+- Course schema compatibility fixes
+
+Latest verification completed:
+
+- admin-backend build passed
+- admin-frontend build passed
+
+
+End of integration summary.
