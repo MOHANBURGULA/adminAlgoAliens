@@ -2,16 +2,16 @@
 
 import Link from "next/link"
 import { signIn, signOut } from "next-auth/react"
-import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { Suspense, useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { Eye, EyeOff, Loader2 } from "lucide-react"
 import {
   clearAllSessions,
   clearAuthSession,
-  resolvePostAuthRoute,
   storeAuthSession,
 } from "@/lib/auth"
+import { resolveAuthenticatedRedirect } from "@/lib/auth-guard"
 import { apiClient, getLastApiErrorMessage } from "@/lib/api-client"
 import { getApiErrorMessage } from "@/lib/http"
 
@@ -25,14 +25,36 @@ type AuthResponse = {
   }
 }
 
-export default function SigninPage() {
+function getOauthErrorMessage(error: string | null) {
+  switch (error) {
+    case "AccessDenied":
+      return "Google sign-in was cancelled before it could finish."
+    case "OAuthCallback":
+    case "OAuthSignin":
+      return "Google sign-in timed out. Please try again. If it keeps failing, use email and password for now."
+    default:
+      return ""
+  }
+}
+
+function SigninPageContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
+  const oauthErrorMessage = getOauthErrorMessage(searchParams?.get("error") ?? null)
+
+  useEffect(() => {
+    if (!oauthErrorMessage) {
+      return
+    }
+
+    setErrorMessage(oauthErrorMessage)
+  }, [oauthErrorMessage])
 
   const handleGoogleSignin = async () => {
     try {
@@ -76,7 +98,7 @@ export default function SigninPage() {
       }
 
       storeAuthSession(data.token, data.user)
-      router.replace(resolvePostAuthRoute(data.user))
+      router.replace(await resolveAuthenticatedRedirect(data.user))
       toast.success("Login successful!")
     } catch (error: unknown) {
       clearAuthSession()
@@ -93,18 +115,18 @@ export default function SigninPage() {
     <div className="flex min-h-screen items-center justify-center px-4 py-10">
       <form
         onSubmit={handleSignin}
-        className="w-full max-w-md rounded-2xl border border-purple-500/15 bg-[rgba(18,9,42,0.94)] p-8 shadow-lg shadow-black/30"
+        className="theme-auth-card w-full max-w-md p-8"
       >
         <div className="mb-8">
-          <h1 className="text-3xl font-semibold text-purple-300">Sign in</h1>
-          <p className="mt-2 text-gray-400">Enter your credentials to continue learning</p>
+          <h1 className="text-3xl font-semibold accent-gradient-text">Sign in</h1>
+          <p className="mt-2 text-theme-muted">Enter your credentials to continue learning</p>
         </div>
 
         <button
           type="button"
           onClick={() => void handleGoogleSignin()}
           disabled={googleLoading || submitting}
-          className="flex w-full items-center justify-center gap-3 rounded-xl border border-purple-500/25 px-4 py-3 text-white transition-all duration-300 hover:scale-[1.02] hover:bg-purple-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+          className="theme-social-button flex w-full px-4 py-3 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {googleLoading ? (
             <Loader2 className="animate-spin" size={18} />
@@ -120,14 +142,14 @@ export default function SigninPage() {
         </button>
 
         <div className="my-6 flex items-center gap-4">
-          <div className="h-px flex-1 bg-purple-500/15" />
-          <span className="text-xs uppercase tracking-[0.18em] text-purple-200/70">or</span>
-          <div className="h-px flex-1 bg-purple-500/15" />
+          <div className="theme-divider-line" />
+          <span className="text-xs uppercase tracking-[0.18em] text-theme-muted">or</span>
+          <div className="theme-divider-line" />
         </div>
 
         <div className="space-y-4">
           <div>
-            <label className="mb-2 block text-sm text-purple-100">Email</label>
+            <label className="mb-2 block text-sm text-theme-main">Email</label>
             <input
               type="email"
               className="input-ui"
@@ -139,7 +161,7 @@ export default function SigninPage() {
           </div>
 
           <div>
-            <label className="mb-2 block text-sm text-purple-100">Password</label>
+            <label className="mb-2 block text-sm text-theme-main">Password</label>
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
@@ -152,7 +174,7 @@ export default function SigninPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword((current) => !current)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-purple-200 transition hover:text-white"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-theme-muted transition hover:text-theme-main"
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
@@ -168,7 +190,7 @@ export default function SigninPage() {
           <button
             type="submit"
             disabled={submitting || googleLoading}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-600 px-4 py-3 font-medium text-white shadow-md shadow-fuchsia-950/20 transition-all duration-300 hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60"
+            className="theme-button-primary flex w-full gap-2 px-4 py-3 font-medium disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? (
               <>
@@ -181,15 +203,29 @@ export default function SigninPage() {
           </button>
         </div>
 
-        <div className="mt-6 flex justify-between text-sm text-gray-400">
-          <Link href="/forgot-password" className="hover:text-white">
+        <div className="mt-6 flex justify-between text-sm text-theme-muted">
+          <Link href="/forgot-password" className="theme-link-muted">
             Forgot password
           </Link>
-          <Link href="/signup" className="hover:text-white">
+          <Link href="/signup" className="theme-link-muted">
             Create account
           </Link>
         </div>
       </form>
     </div>
+  )
+}
+
+export default function SigninPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center px-4 py-10 text-theme-muted">
+          Loading sign in...
+        </div>
+      }
+    >
+      <SigninPageContent />
+    </Suspense>
   )
 }

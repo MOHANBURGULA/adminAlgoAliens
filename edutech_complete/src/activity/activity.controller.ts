@@ -8,23 +8,15 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common'
-import { AdminGuard } from '../admin/admin.guard'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { RedisRateLimit } from '../redis/redis-rate-limit.decorator'
 import { RedisRateLimitGuard } from '../redis/redis-rate-limit.guard'
 import { ActivityService } from './activity.service'
-import { CreateActivityDto } from './dto/create-activity.dto'
 import { SubmitActivityDto } from './dto/submit-activity.dto'
 
 @Controller('api')
 export class ActivityController {
   constructor(private readonly activityService: ActivityService) {}
-
-  @Post('admin/activity')
-  @UseGuards(JwtAuthGuard, AdminGuard)
-  createActivity(@Body() dto: CreateActivityDto) {
-    return this.activityService.createActivity(dto)
-  }
 
   @Get('activity/course/:courseId/video-eligibility')
   @UseGuards(JwtAuthGuard)

@@ -5,6 +5,7 @@ import { ActivityService } from '../activity/activity.service'
 import { Video } from './video.entity'
 import { MetricNames } from '../redis/cache.helpers'
 import { RedisMetricsService } from '../redis/redis-metrics.service'
+import { CreateVideoInput } from './videos.types'
 
 @Injectable()
 export class VideosService {
@@ -16,11 +17,26 @@ export class VideosService {
     private readonly redisMetricsService: RedisMetricsService,
   ) {}
 
-  async upload(userId: number, data: any) {
+  async upload(userId: number, data: CreateVideoInput) {
     const courseId = Number(data.courseId)
+    const title = data.title?.trim()
+    const description = data.description?.trim()
+    const videoUrl = data.videoUrl?.trim()
 
     if (!courseId) {
       throw new BadRequestException('Course id is required to upload a video')
+    }
+
+    if (!title) {
+      throw new BadRequestException('Title is required to upload a video')
+    }
+
+    if (!description) {
+      throw new BadRequestException('Description is required to upload a video')
+    }
+
+    if (!videoUrl) {
+      throw new BadRequestException('Video URL is required to upload a video')
     }
 
     const hasQualifiedActivity = await this.activityService.hasQualifiedActivityScore(
@@ -35,7 +51,14 @@ export class VideosService {
       )
     }
 
-    const video = this.videosRepository.create({ userId, ...data, status: 'under_review' })
+    const video = this.videosRepository.create({
+      userId,
+      courseId,
+      title,
+      description,
+      videoUrl,
+      status: 'under_review',
+    })
     const savedVideo = await this.videosRepository.save(video)
     await this.redisMetricsService.increment(MetricNames.videosSubmitted)
     return savedVideo

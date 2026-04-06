@@ -1,0 +1,170 @@
+ALGOALIENS ROOT NOTES
+=====================
+
+1. BACKEND + JUDGE0 STARTUP
+---------------------------
+
+Start Docker Desktop first.
+
+Backend and Judge0 together
+cd .\edutech_complete
+npm run start:dev
+
+Judge0 only
+cd .\edutech_complete
+npm run judge0:start
+
+Direct Docker Compose command used by the backend helper
+docker compose -f C:\Users\HP\Desktop\judge0\docker-compose.yml up -d
+
+
+2. ALGOALIENS BRAND AND THEME GUIDE
+-----------------------------------
+
+Core Brand Identity
+Primary Accent (Magenta): #b829a8
+Secondary Accent (Cyan): #2ce2d0
+Tertiary/Neutral (Silver): #94a3b8 / #ffffff
+
+Standard Logo Gradients
+Magenta-Cyan Angular Cut:
+linear-gradient(to bottom right, #b829a8, #2ce2d0)
+
+Silver Overlap:
+linear-gradient(to bottom right, #ffffff, #94a3b8)
+
+
+Theme 1: Enterprise Dark (Default)
+Vibe:
+Highly polished, standard SaaS dark mode similar to VS Code or Vercel. Deep slate-blue backgrounds make the brand neon colors pop without causing eye strain.
+
+Backgrounds
+--bg-base: #0B1120
+--bg-surface: #131E32
+--bg-surface-hover: #1E293B
+
+Typography and Lines
+--text-main: #F8FAFC
+--text-muted: #94A3B8
+--border-color: #1E293B
+
+Brand Accents
+--accent-magenta: #b829a8
+--accent-cyan: #2ce2d0
+
+Structural CSS
+Card Radius: 0.5rem
+Card Shadow: 0 4px 6px -1px rgba(0,0,0,0.2), 0 2px 4px -2px rgba(0,0,0,0.1)
+Button: linear-gradient(135deg, var(--accent-magenta), var(--accent-cyan)) with a subtle cyan drop-shadow
+
+
+Theme 2: Clean SaaS (Light Mode)
+Vibe:
+A crisp, modern white/gray interface for daytime working or users who prefer high-contrast light environments. Brand colors are slightly darkened to ensure text readability on white.
+
+Backgrounds
+--bg-base: #F8FAFC
+--bg-surface: #FFFFFF
+--bg-surface-hover: #F1F5F9
+
+Typography and Lines
+--text-main: #0F172A
+--text-muted: #64748B
+--border-color: #E2E8F0
+
+Brand Accents
+--accent-magenta: #a01d91
+--accent-cyan: #00998e
+
+Structural CSS
+Card Radius: 0.5rem
+Card Shadow: 0 1px 3px 0 rgba(0,0,0,0.1)
+Button: standard brand gradient with no borders
+
+
+Theme 3: Brand Immersion (Premium / Midnight Violet)
+Vibe:
+An advanced, immersive glassmorphism theme using a plum/violet base. It features ambient corner lighting and translucent, blurred cards mimicking polished dark glass.
+
+Backgrounds
+--bg-base: gradient combining #0A0410, #130822 with radial glowing orbs of Magenta rgba(184,41,168,0.25) and Cyan rgba(44,226,208,0.15)
+--bg-surface: rgba(24, 13, 43, 0.55)
+--bg-surface-hover: rgba(40, 22, 70, 0.75)
+
+Typography and Lines
+--text-main: #FFFFFF
+--text-muted: #AFA1C7
+--border-color: rgba(255, 255, 255, 0.08)
+
+Structural CSS
+--glass-filter: blur(24px) saturate(130%)
+Card Radius: 1.25rem
+Card Shadow: heavy drop shadow rgba(0,0,0,0.7) plus inner white top-light inset 0 1px 2px rgba(255, 255, 255, 0.1)
+Button: Magenta gradient from #b829a8 to #E040D0 with a glowing magenta drop shadow
+
+
+Theme 4: High Contrast (OLED Black)
+Vibe:
+Designed for OLED screens, battery saving, and data-dense dashboards. Pitch black backgrounds with sharp, rigid corners and minimal shadows.
+
+Backgrounds
+--bg-base: #000000
+--bg-surface: #0A0A0A
+--bg-surface-hover: #171717
+
+Typography and Lines
+--text-main: #E5E5E5
+--text-muted: #737373
+--border-color: #262626
+
+Structural CSS
+Card Radius: 0.25rem
+Card Shadow: none
+Button: transparent background with 1px solid var(--accent-cyan) border
+
+
+Theme 5: Silver Executive
+Vibe:
+Metallic, cool grays with a highly professional, understated corporate feel.
+
+Backgrounds
+--bg-base: #EAEAEB
+--bg-surface: #F4F4F5
+--bg-surface-hover: #FFFFFF
+
+Typography and Lines
+--text-main: #18181B
+--text-muted: #71717A
+--border-color: #D4D4D8
+
+Brand Accents
+--accent-magenta: #9D178E
+--accent-cyan: #008A7F
+
+Structural CSS
+Card Radius: 0.375rem
+Card Shadow: inner white highlight inset 0 2px 4px rgba(255,255,255,0.5) plus light drop shadow
+Button: solid #18181B
+
+
+3. IMPLEMENTATION RULES FOR INTERNS
+-----------------------------------
+
+Never hardcode hex values in CSS or inline styles.
+Wrong:
+<div style={{ backgroundColor: '#131E32' }}>
+
+Right:
+<div style={{ backgroundColor: 'var(--bg-surface)' }}>
+
+Use semantic variables.
+Use --bg-base for the main app background or body.
+Use --bg-surface for cards, modals, and panels.
+Use --text-main for headings and primary data.
+Use --text-muted for labels, subtext, and placeholders.
+
+Applying Borders
+Always apply border: var(--card-border) so the component adapts correctly across themes.
+
+Backdrop Filters
+If you are building a new floating element like a dropdown or sticky header, apply backdrop-filter: var(--glass-filter) so it inherits the blur effect when the Midnight Violet theme is active.

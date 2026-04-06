@@ -315,7 +315,7 @@ export async function updateEnrollmentProgress(enrollmentId: number, progress: n
 }
 
 export async function fetchUserProfile() {
-  const { data } = await apiClient.get<UserProfile>("/api/users/profile")
+  const { data } = await apiClient.get<UserProfile>("/api/profile")
   return data
 }
 

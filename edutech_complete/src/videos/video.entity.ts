@@ -9,10 +9,13 @@ export class Video {
   @Column()
   userId!: number
 
+  @Column({ type: 'int', nullable: true })
+  courseId!: number | null
+
   @Column()
   title!: string
 
-  @Column()
+  @Column({ default: '' })
   description!: string
 
   @Column()

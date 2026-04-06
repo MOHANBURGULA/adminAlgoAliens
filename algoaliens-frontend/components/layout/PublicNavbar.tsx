@@ -1,82 +1,82 @@
-// import Link from "next/link"
+"use client"
 
-// export default function PublicNavbar() {
-//   return (
-//     <nav className="w-full border-b border-purple-900/30 backdrop-blur-sm">
-
-//       <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
-
-//         {/* Logo */}
-//         <Link href="/" className="text-xl font-bold">
-//           AlgoAliens
-//         </Link>
-
-//         {/* Navigation */}
-//         <div className="flex items-center gap-8 text-sm text-gray-300">
-
-//           <Link href="/" className="hover:text-white">
-//             Home
-//           </Link>
-
-//           <Link href="/courses" className="hover:text-white">
-//             Courses
-//           </Link>
-          
-//           <Link href="/signin" className="hover:text-white">
-//             Login
-//           </Link>
-
-//           <Link href="/signup" className="hover:text-white">
-//             Signup
-//           </Link>
-
-//         </div>
-
-//       </div>
-
-//     </nav>
-//   )
-// }
 import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { useEffect, useState } from "react"
+import { useMounted } from "@/hooks/use-mounted"
+import BrandLogo from "@/components/layout/BrandLogo"
+import { isAuthenticated } from "@/lib/auth"
+import { cn } from "@/lib/utils"
+
+function isCoursesRoute(pathname: string | null) {
+  return pathname === "/courses" || pathname?.startsWith("/courses/") || false
+}
 
 export default function PublicNavbar() {
+  const pathname = usePathname()
+  const mounted = useMounted()
+  const [authenticated, setAuthenticated] = useState(false)
+
+  useEffect(() => {
+    const syncAuthState = () => {
+      setAuthenticated(isAuthenticated())
+    }
+
+    syncAuthState()
+    window.addEventListener("storage", syncAuthState)
+
+    return () => {
+      window.removeEventListener("storage", syncAuthState)
+    }
+  }, [])
+
+  const showAuthenticatedActions = mounted && authenticated
+
   return (
-    <nav className="w-full border-b border-purple-900/30 backdrop-blur-sm">
+    <header className="public-nav-shell sticky top-0 z-40 w-full">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4 md:px-8">
+        <BrandLogo href="/" size={48} priority showWordmark titleClassName="text-xl" />
 
-      <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
-
-        {/* Logo */}
-        <Link href="/" className="text-xl font-bold">
-          AlgoAliens
-        </Link>
-
-        {/* Navigation */}
-        <div className="flex items-center gap-6 text-sm text-gray-300">
-
-          <Link href="/" className="hover:text-white">
+        <nav className="hidden items-center gap-8 md:flex">
+          <Link
+            href="/"
+            className={cn("public-nav-link", pathname === "/" && "public-nav-link-active")}
+          >
             Home
           </Link>
-
-          <Link href="/courses" className="hover:text-white">
+          <Link
+            href="/courses"
+            className={cn("public-nav-link", isCoursesRoute(pathname) && "public-nav-link-active")}
+          >
             Courses
           </Link>
+        </nav>
 
-          {/* ✅ Login */}
-          <Link href="/signin" className="hover:text-white">
-            Login
-          </Link>
-
-          {/* ✅ Signup (CTA button) */}
-          <Link href="/signup">
-            <button className="rounded-lg bg-gradient-to-r from-purple-600 to-indigo-700 px-4 py-2 text-white">
-              Get Started
-            </button>
-          </Link>
-
+        <div className="flex items-center gap-3">
+          {showAuthenticatedActions ? (
+            <>
+              <Link
+                href="/dashboard"
+                className="theme-outline-link hidden px-4 py-2 text-sm md:inline-flex"
+              >
+                Dashboard
+              </Link>
+              <Link href="/courses" className="theme-button-primary px-4 py-2 text-sm">
+                Explore Catalog
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link href="/signin" className="theme-link-muted text-sm">
+                Login
+              </Link>
+              <Link href="/signup" className="theme-button-primary px-4 py-2 text-sm">
+                Get Started
+              </Link>
+            </>
+          )}
         </div>
-
       </div>
-
-    </nav>
+    </header>
   )
 }

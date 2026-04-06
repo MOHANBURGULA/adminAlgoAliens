@@ -1,46 +1,59 @@
 "use client"
 
-import { clearAuthSession, getStoredToken, resolvePostAuthRoute, storeAuthSession, type StoredUser } from "./auth"
+import {
+  clearAuthSession,
+  getStoredToken,
+  resolvePostAuthRoute,
+  storeAuthSession,
+  type StoredUser,
+} from "./auth"
 import { apiClient } from "./api-client"
+import { normalizeUserProfile, type UserProfileData } from "./profile"
+import {
+  APP_ROUTES,
+  getUnauthorizedRedirect,
+  isAdminRoute,
+  isOnboardingRoute,
+  isProtectedUserRoute,
+  isPublicRoute,
+  isResetPasswordRoute,
+  isUserAuthRoute,
+  requiresOnboardingCheck,
+} from "./routes"
 
-const PUBLIC_ROUTES = new Set([
-  "/",
-  "/courses",
-  "/signin",
-  "/signup",
-  "/forgot-password",
-  "/auth/success",
-  "/admin/login",
-])
-
-const USER_AUTH_ROUTES = new Set([
-  "/signin",
-  "/signup",
-  "/forgot-password",
-])
-
-export function isPublicRoute(pathname?: string | null) {
-  return pathname ? PUBLIC_ROUTES.has(pathname) : false
+export {
+  getUnauthorizedRedirect,
+  isAdminRoute,
+  isOnboardingRoute,
+  isProtectedUserRoute,
+  isPublicRoute,
+  isResetPasswordRoute,
+  isUserAuthRoute,
+  requiresOnboardingCheck,
 }
 
-export function isResetPasswordRoute(pathname?: string | null) {
-  return pathname?.startsWith("/reset-password/") ?? false
+export async function fetchAuthenticatedProfile() {
+  const profile = await apiClient.get<UserProfileData>("/api/profile")
+
+  if (!profile) {
+    clearAuthSession()
+    return null
+  }
+
+  return normalizeUserProfile(profile)
 }
 
-export function isUserAuthRoute(pathname?: string | null) {
-  return pathname ? USER_AUTH_ROUTES.has(pathname) : false
-}
+export async function resolveAuthenticatedRedirect(user?: StoredUser | null) {
+  if (!user) {
+    return APP_ROUTES.SIGNIN
+  }
 
-export function isAdminRoute(pathname?: string | null) {
-  return Boolean(pathname?.startsWith("/admin") && pathname !== "/admin/login")
-}
+  const profile = await fetchAuthenticatedProfile()
+  if (!profile) {
+    return APP_ROUTES.SIGNIN
+  }
 
-export function getUnauthorizedRedirect(pathname?: string | null) {
-  return isAdminRoute(pathname) ? "/admin/login" : "/signin"
-}
-
-export function getAuthenticatedRedirect(user?: StoredUser | null) {
-  return resolvePostAuthRoute(user)
+  return profile.onboarding_completed ? resolvePostAuthRoute(user) : APP_ROUTES.ONBOARDING
 }
 
 export async function validateStoredSession() {

@@ -1,11 +1,18 @@
 "use client"
 
+import { FEATURES } from "@/config/features"
 import { apiClient } from "./axios"
 import type {
   ActivityContent,
   ActivityType,
   ModuleActivity,
 } from "./learning"
+
+function assertAdminApiEnabled() {
+  if (!FEATURES.ENABLE_ADMIN) {
+    throw new Error("Admin features are disabled in this application.")
+  }
+}
 
 export type AdminCourse = {
   id: number
@@ -59,6 +66,8 @@ export async function uploadBlobWithSignedUrl(
   file: Blob,
   contentType: string,
 ) {
+  assertAdminApiEnabled()
+
   const uploadRes = await apiClient.get(
     `/api/admin/modules/documents/upload-url?filename=${encodeURIComponent(filename)}`,
   )
@@ -89,6 +98,8 @@ export async function uploadModulePdfDocument(payload: {
   title: string
   file: File
 }) {
+  assertAdminApiEnabled()
+
   const formData = new FormData()
   formData.append("moduleId", String(payload.moduleId))
   formData.append("label", payload.label)
@@ -109,6 +120,8 @@ export async function uploadModulePdfDocument(payload: {
 }
 
 export async function fetchAdminModuleActivities(moduleId: number) {
+  assertAdminApiEnabled()
+
   const response = await apiClient.get<ModuleActivity[]>(`/api/activity/${moduleId}`)
   return response.data
 }
@@ -118,6 +131,8 @@ export async function createAdminActivity(payload: {
   activityType: ActivityType
   content: ActivityContent
 }) {
+  assertAdminApiEnabled()
+
   const response = await apiClient.post<ModuleActivity>("/api/admin/activity", payload)
   return response.data
 }
@@ -189,6 +204,8 @@ function createFinalQuestions(courseId: number, moduleId: number) {
 }
 
 export async function seedDsaCourse() {
+  assertAdminApiEnabled()
+
   const existingCourses = (await apiClient.get("/api/admin/courses"))
     .data as AdminCourse[]
 

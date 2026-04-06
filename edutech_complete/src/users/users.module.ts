@@ -1,11 +1,13 @@
-import { Module } from '@nestjs/common'
-import { ConfigModule, ConfigService } from '@nestjs/config'
-import { JwtModule } from '@nestjs/jwt'
-import { TypeOrmModule } from '@nestjs/typeorm'
-import { User } from './user.entity'
-import { UserProfile } from './user-profile.entity'
-import { UsersService } from './users.service'
-import { UsersController } from './users.controller'
+import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { User } from './user.entity';
+import { UserProfile } from './user-profile.entity';
+import { UserProfileSchemaService } from './user-profile-schema.service';
+import { UsersService } from './users.service';
+import { UsersController } from './users.controller';
+import { ProfileController } from './profile.controller';
 
 @Module({
   imports: [
@@ -20,8 +22,8 @@ import { UsersController } from './users.controller'
       }),
     }),
   ],
-  controllers: [UsersController],
-  providers: [UsersService],
+  controllers: [UsersController, ProfileController],
+  providers: [UsersService, UserProfileSchemaService],
   exports: [UsersService],
 })
 export class UsersModule {}

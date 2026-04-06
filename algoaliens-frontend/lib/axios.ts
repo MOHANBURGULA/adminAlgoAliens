@@ -1,9 +1,7 @@
 import axios from "axios"
 import { clearAuthSession, getStoredToken } from "./auth"
 import { notifyUnauthorized } from "./auth-events"
-
-const API_BASE_URL =
-  (process.env.NEXT_PUBLIC_API_URL?.trim() || "http://127.0.0.1:3001").replace(/\/$/, "")
+import { API_BASE_URL } from "./api-base-url"
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,

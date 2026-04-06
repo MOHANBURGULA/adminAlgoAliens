@@ -1,9 +1,7 @@
 "use client"
 
 import { clearAuthSession, getStoredToken } from "./auth"
-
-const API_BASE_URL =
-  (process.env.NEXT_PUBLIC_API_URL?.trim() || "http://127.0.0.1:3001").replace(/\/$/, "")
+import { API_BASE_URL, getApiConnectionErrorMessage } from "./api-base-url"
 
 type HttpMethod = "DELETE" | "GET" | "PATCH" | "POST" | "PUT"
 
@@ -68,11 +66,27 @@ export function getLastApiErrorMessage() {
 async function request<T>(path: string, method: HttpMethod = "GET", body?: RequestBody) {
   lastApiErrorMessage = ""
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method,
-    headers: buildHeaders(),
-    body: body ? JSON.stringify(body) : undefined,
-  })
+  let response: Response
+
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      method,
+      headers: buildHeaders(),
+      body: body ? JSON.stringify(body) : undefined,
+    })
+  } catch (error) {
+    const errorMessage = getApiConnectionErrorMessage(path)
+    lastApiErrorMessage = errorMessage
+
+    console.error("[api-client] network request failed", {
+      method,
+      path,
+      baseUrl: API_BASE_URL,
+      error,
+    })
+
+    throw new ApiClientError(errorMessage, 0, null)
+  }
 
   const payload = await parseResponseBody(response)
 

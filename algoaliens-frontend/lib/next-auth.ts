@@ -1,5 +1,23 @@
+import dns from "node:dns"
 import type { AuthOptions } from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
+import { googleConfig, nextAuthConfig } from "@/config/auth.config"
+
+try {
+  dns.setDefaultResultOrder("ipv4first")
+} catch {
+  // Ignore unsupported runtimes; NextAuth can still fall back to the default DNS order.
+}
+
+const DEFAULT_GOOGLE_OAUTH_TIMEOUT_MS = 15_000
+
+function getGoogleOauthTimeoutMs() {
+  const value = Number.parseInt(process.env.GOOGLE_OAUTH_TIMEOUT_MS ?? "", 10)
+
+  return Number.isFinite(value) && value > 0
+    ? value
+    : DEFAULT_GOOGLE_OAUTH_TIMEOUT_MS
+}
 
 // Centralize the Google auth setup so both client hooks and API routes use one config.
 export const authOptions: AuthOptions = {
@@ -7,11 +25,18 @@ export const authOptions: AuthOptions = {
   session: {
     strategy: "jwt",
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: nextAuthConfig.secret,
+  pages: {
+    signIn: "/signin",
+    error: "/signin",
+  },
   providers: [
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID ?? "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+      clientId: googleConfig.clientID,
+      clientSecret: googleConfig.clientSecret,
+      httpOptions: {
+        timeout: getGoogleOauthTimeoutMs(),
+      },
     }),
   ],
 }

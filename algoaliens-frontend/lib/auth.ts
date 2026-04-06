@@ -1,5 +1,9 @@
 "use client"
 
+import { APP_ROUTES } from "./routes"
+import { ONBOARDING_DRAFT_STORAGE_KEY } from "./onboarding"
+import { FEATURES } from "@/config/features"
+
 export const USER_TOKEN_KEY = "token"
 export const USER_KEY = "user"
 
@@ -32,6 +36,10 @@ function removeLegacyAuthKeys() {
   storage.removeItem("profileSetup")
 }
 
+function removeOnboardingDraft() {
+  getBrowserStorage()?.removeItem(ONBOARDING_DRAFT_STORAGE_KEY)
+}
+
 function parseStoredUser(rawUser: Nullable<string>) {
   if (!rawUser) {
     return null
@@ -58,6 +66,10 @@ export function isAuthenticated() {
 
 export function isAdminUser(user?: Nullable<StoredUser>) {
   return (user || getStoredUser())?.role === "admin"
+}
+
+export function hasAdminAccess(user?: Nullable<StoredUser>) {
+  return FEATURES.ENABLE_ADMIN && isAdminUser(user)
 }
 
 export function storeAuthSession(token: string, user: StoredUser) {
@@ -92,6 +104,7 @@ export function clearAuthSession() {
   storage.removeItem(USER_TOKEN_KEY)
   storage.removeItem(USER_KEY)
   removeLegacyAuthKeys()
+  removeOnboardingDraft()
 }
 
 export function clearAdminSession() {
@@ -104,9 +117,9 @@ export function clearAllSessions() {
 
 export function getStoredAdminUser() {
   const user = getStoredUser()
-  return user?.role === "admin" ? user : null
+  return hasAdminAccess(user) ? user : null
 }
 
 export function resolvePostAuthRoute(user?: Nullable<StoredUser>) {
-  return isAdminUser(user) ? "/admin/dashboard" : "/dashboard"
+  return hasAdminAccess(user) ? APP_ROUTES.ADMIN_DASHBOARD : APP_ROUTES.DASHBOARD
 }

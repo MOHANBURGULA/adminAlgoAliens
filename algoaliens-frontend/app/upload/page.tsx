@@ -261,7 +261,7 @@ function UploadPageContent() {
 
         {selectedCourseId ? (
           <Link
-            href={`/courses/${selectedCourseId}`}
+            href={`/courses/${selectedCourseId}/learn`}
             className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white transition hover:bg-white/[0.06]"
           >
             Back to course

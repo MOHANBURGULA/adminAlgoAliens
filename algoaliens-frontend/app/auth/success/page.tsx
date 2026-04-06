@@ -4,7 +4,8 @@ import { useEffect, useRef } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import toast from "react-hot-toast"
-import { clearAllSessions, clearAuthSession, resolvePostAuthRoute, storeAuthSession } from "@/lib/auth"
+import { clearAllSessions, clearAuthSession, storeAuthSession } from "@/lib/auth"
+import { resolveAuthenticatedRedirect } from "@/lib/auth-guard"
 import { apiClient, getLastApiErrorMessage } from "@/lib/api-client"
 import { getApiErrorMessage } from "@/lib/http"
 
@@ -18,24 +19,91 @@ type AuthResponse = {
   }
 }
 
+type GoogleExchangeResult = {
+  nextRoute: string
+  displayName: string
+}
+
+let activeGoogleExchangeKey: string | null = null
+let activeGoogleExchangePromise: Promise<GoogleExchangeResult> | null = null
+
+function getGoogleExchangeKey(email: string, name: string) {
+  return `${email.toLowerCase()}::${name.trim()}`
+}
+
+function startGoogleExchange(email: string, name: string) {
+  const exchangeKey = getGoogleExchangeKey(email, name)
+
+  if (activeGoogleExchangeKey === exchangeKey && activeGoogleExchangePromise) {
+    return activeGoogleExchangePromise
+  }
+
+  activeGoogleExchangeKey = exchangeKey
+  activeGoogleExchangePromise = (async () => {
+    clearAllSessions()
+
+    const data = await apiClient.post<AuthResponse>("/api/auth/google", {
+      email,
+      name,
+    })
+
+    if (!data) {
+      throw new Error(getLastApiErrorMessage() || "Unable to complete Google login")
+    }
+
+    const token = data.token
+
+    console.debug("[auth] google login response", {
+      hasToken: Boolean(token),
+      userId: data.user?.id,
+      role: data.user?.role || "student",
+    })
+
+    if (!token || !data.user) {
+      throw new Error("Invalid response from server")
+    }
+
+    storeAuthSession(token, data.user)
+    const nextRoute = await resolveAuthenticatedRedirect(data.user)
+
+    return {
+      nextRoute,
+      displayName: data.user.name || data.user.email,
+    }
+  })().finally(() => {
+    activeGoogleExchangeKey = null
+    activeGoogleExchangePromise = null
+  })
+
+  return activeGoogleExchangePromise
+}
+
 export default function AuthSuccessPage() {
   const router = useRouter()
   const { data: session, status } = useSession()
   const hasStarted = useRef(false)
 
   useEffect(() => {
+    let cancelled = false
+
     if (status === "loading") {
-      return
+      return () => {
+        cancelled = true
+      }
     }
 
     if (status === "unauthenticated" && !hasStarted.current) {
       clearAllSessions()
       router.replace("/signup")
-      return
+      return () => {
+        cancelled = true
+      }
     }
 
     if (status !== "authenticated" || hasStarted.current) {
-      return
+      return () => {
+        cancelled = true
+      }
     }
 
     hasStarted.current = true
@@ -52,35 +120,20 @@ export default function AuthSuccessPage() {
       }
 
       try {
-        clearAllSessions()
+        const result = await startGoogleExchange(email, name)
 
-        const data = await apiClient.post<AuthResponse>("/api/auth/google", {
-          email,
-          name,
-        })
-
-        if (!data) {
-          throw new Error(getLastApiErrorMessage() || "Unable to complete Google login")
+        if (cancelled) {
+          return
         }
 
-        const token = data.token
-
-        console.debug("[auth] google login response", {
-          hasToken: Boolean(token),
-          userId: data.user?.id,
-          role: data.user?.role || "student",
-        })
-
-        if (!token || !data.user) {
-          throw new Error("Invalid response from server")
-        }
-
-        storeAuthSession(token, data.user)
-        const nextRoute = resolvePostAuthRoute(data.user)
-        toast.success(`Signed in as ${data.user.name || data.user.email}`)
-
-        router.replace(nextRoute)
+        toast.success(`Signed in as ${result.displayName}`)
+        router.replace(result.nextRoute)
       } catch (error: unknown) {
+        if (cancelled) {
+          return
+        }
+
+        console.error("[auth] google login exchange failed", error)
         clearAuthSession()
         toast.error(getApiErrorMessage(error, "Unable to complete Google login"))
 
@@ -89,6 +142,10 @@ export default function AuthSuccessPage() {
     }
 
     void finishGoogleLogin()
+
+    return () => {
+      cancelled = true
+    }
   }, [router, session, status])
 
   return (

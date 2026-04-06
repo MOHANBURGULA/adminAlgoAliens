@@ -4,66 +4,37 @@ import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import toast from "react-hot-toast"
-import { ArrowRight, BookOpen, Search } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import CourseCard from "@/components/courses/CourseCard"
 import { Input } from "@/components/ui/input"
+import { Layers3, Search, SlidersHorizontal, Sparkles } from "lucide-react"
 import { isAuthenticated } from "@/lib/auth"
-import { clampProgress, getCourseProgressLabel } from "@/lib/course-progress"
 import {
   enrollInCourse,
+  fetchCourseModules,
   fetchCourses,
   fetchEnrollments,
   fetchUserProfile,
   formatDifficulty,
-  formatRelativeDate,
   normalizeDifficulty,
   type Course,
+  type CourseModule,
   type Enrollment,
   type UserProfile,
 } from "@/lib/learning"
+import { formatCompactNumber, getCourseCatalogMetadata } from "@/lib/course-catalog"
 
-function getCourseCardTheme(difficulty: string) {
-  const normalized = normalizeDifficulty(difficulty)
-
-  if (normalized === "advanced") {
-    return {
-      accentGlow: "bg-fuchsia-500/16",
-      accentLine: "from-transparent via-fuchsia-300/80 to-transparent",
-      badge: "bg-fuchsia-500/12 text-fuchsia-100",
-      meta: "border-fuchsia-400/15 bg-fuchsia-500/[0.05]",
-      progress: "from-fuchsia-500 via-violet-500 to-purple-700",
-      recommended: "bg-rose-500/12 text-rose-100",
-    }
-  }
-
-  if (normalized === "intermediate") {
-    return {
-      accentGlow: "bg-violet-500/16",
-      accentLine: "from-transparent via-violet-300/80 to-transparent",
-      badge: "bg-violet-500/12 text-violet-100",
-      meta: "border-violet-400/15 bg-violet-500/[0.05]",
-      progress: "from-violet-500 via-purple-500 to-fuchsia-600",
-      recommended: "bg-fuchsia-500/12 text-fuchsia-100",
-    }
-  }
-
-  return {
-    accentGlow: "bg-indigo-500/16",
-    accentLine: "from-transparent via-indigo-300/80 to-transparent",
-    badge: "bg-indigo-500/12 text-indigo-100",
-    meta: "border-indigo-400/15 bg-indigo-500/[0.05]",
-    progress: "from-indigo-400 via-violet-500 to-fuchsia-500",
-    recommended: "bg-violet-500/12 text-violet-100",
-  }
-}
+type ModulesByCourse = Record<number, CourseModule[]>
 
 export default function CoursesPage() {
   const router = useRouter()
   const [authenticated, setAuthenticated] = useState(false)
   const [courses, setCourses] = useState<Course[]>([])
+  const [modulesByCourse, setModulesByCourse] = useState<ModulesByCourse>({})
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [search, setSearch] = useState("")
+  const [difficultyFilter, setDifficultyFilter] = useState("all")
+  const [categoryFilter, setCategoryFilter] = useState("all")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [enrollingCourseId, setEnrollingCourseId] = useState<number | null>(null)
@@ -90,12 +61,22 @@ export default function CoursesPage() {
         setError("")
 
         const publicCourses = await fetchCourses()
+        const moduleResults = await Promise.allSettled(
+          publicCourses.map((course) => fetchCourseModules(course.id)),
+        )
 
         if (cancelled) {
           return
         }
 
         setCourses(publicCourses)
+        setModulesByCourse(
+          publicCourses.reduce<ModulesByCourse>((accumulator, course, index) => {
+            accumulator[course.id] =
+              moduleResults[index]?.status === "fulfilled" ? moduleResults[index].value : []
+            return accumulator
+          }, {}),
+        )
 
         if (!authenticated) {
           setEnrollments([])
@@ -103,7 +84,7 @@ export default function CoursesPage() {
           return
         }
 
-        const [enrollmentResult, profileResult] = await Promise.allSettled([
+        const [enrollmentsResult, profileResult] = await Promise.allSettled([
           fetchEnrollments(),
           fetchUserProfile(),
         ])
@@ -112,7 +93,7 @@ export default function CoursesPage() {
           return
         }
 
-        setEnrollments(enrollmentResult.status === "fulfilled" ? enrollmentResult.value : [])
+        setEnrollments(enrollmentsResult.status === "fulfilled" ? enrollmentsResult.value : [])
         setProfile(profileResult.status === "fulfilled" ? profileResult.value : null)
       } catch (loadError) {
         if (!cancelled) {
@@ -138,13 +119,35 @@ export default function CoursesPage() {
     [enrollments],
   )
 
+  const categories = useMemo(
+    () =>
+      Array.from(new Set(courses.map((course) => getCourseCatalogMetadata(course).category))).sort(),
+    [courses],
+  )
+
   const filteredCourses = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase()
     const skillLevel = profile?.skillLevel?.trim().toLowerCase() || ""
 
     return [...courses]
-      .filter((course) => course.title.toLowerCase().includes(normalizedSearch))
+      .filter((course) => {
+        const metadata = getCourseCatalogMetadata(course)
+        const matchesSearch =
+          !normalizedSearch ||
+          course.title.toLowerCase().includes(normalizedSearch) ||
+          metadata.shortDescription.toLowerCase().includes(normalizedSearch) ||
+          metadata.category.toLowerCase().includes(normalizedSearch)
+        const matchesDifficulty =
+          difficultyFilter === "all" ||
+          normalizeDifficulty(course.difficulty) === difficultyFilter
+        const matchesCategory =
+          categoryFilter === "all" || metadata.category === categoryFilter
+
+        return matchesSearch && matchesDifficulty && matchesCategory
+      })
       .sort((left, right) => {
+        const leftMeta = getCourseCatalogMetadata(left)
+        const rightMeta = getCourseCatalogMetadata(right)
         const leftRecommended = skillLevel && normalizeDifficulty(left.difficulty) === skillLevel
         const rightRecommended = skillLevel && normalizeDifficulty(right.difficulty) === skillLevel
 
@@ -156,9 +159,9 @@ export default function CoursesPage() {
           return 1
         }
 
-        return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()
+        return rightMeta.rating - leftMeta.rating
       })
-  }, [courses, profile?.skillLevel, search])
+  }, [categoryFilter, courses, difficultyFilter, profile?.skillLevel, search])
 
   const handleEnroll = async (courseId: number) => {
     if (!authenticated) {
@@ -177,7 +180,7 @@ export default function CoursesPage() {
         return [...current, enrollment]
       })
       toast.success("Enrollment successful")
-      router.push(`/courses/${courseId}`)
+      router.push(`/courses/${courseId}/learn`)
     } catch (enrollError) {
       console.error(enrollError)
       toast.error("Unable to enroll right now.")
@@ -186,148 +189,193 @@ export default function CoursesPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="card-ui flex min-h-[50vh] items-center justify-center text-gray-300">
-        Loading courses...
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-6 text-red-100">
-        {error}
-      </div>
-    )
-  }
-
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold text-white">
-            <BookOpen className="text-purple-300" size={24} />
-            Courses
-          </h1>
-          <p className="mt-2 text-sm text-gray-400">
-            Browse live course data and enroll directly without changing your workflow.
-          </p>
-          {profile?.skillLevel ? (
-            <p className="mt-3 text-sm text-purple-200">
-              Recommended for {formatDifficulty(profile.skillLevel)}
+    <div className="mx-auto max-w-7xl space-y-8">
+        <section className="grid gap-5 lg:grid-cols-[1.08fr_0.92fr]">
+          <div className="space-y-4">
+            <p className="text-sm uppercase tracking-[0.24em] text-theme-muted">Course catalog</p>
+            <h1 className="text-3xl font-bold leading-tight text-theme-main md:text-[2.7rem]">
+              Discover courses built for real-world learning outcomes.
+            </h1>
+            <p className="max-w-3xl text-sm leading-7 text-theme-muted">
+              Explore AlgoAliens programs, compare instructors and course depth, and jump straight
+              into the paths that match your learning goals.
             </p>
-          ) : null}
-        </div>
-
-        <div className="flex w-full max-w-xl flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative flex-1">
-            <Search
-              size={16}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-            />
-            <Input
-              className="pl-10"
-              placeholder="Search courses..."
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
+            {profile?.skillLevel ? (
+              <div
+                className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm text-theme-main"
+                style={{ borderColor: "var(--border-color)" }}
+              >
+                <Sparkles size={15} className="text-[var(--accent-cyan)]" />
+                Recommended for your current level:
+                <span className="font-semibold">{formatDifficulty(profile.skillLevel)}</span>
+              </div>
+            ) : null}
           </div>
 
-          <Button asChild variant="secondary">
-            <Link href={authenticated ? "/dashboard" : "/signin"}>
-              {authenticated ? "Dashboard" : "Sign In"}
-            </Link>
-          </Button>
-        </div>
-      </div>
+          <div
+            className="grid gap-3 p-4 md:grid-cols-3 md:p-5"
+            style={{
+              border: "var(--card-border)",
+              borderRadius: "calc(var(--card-radius) + 0.85rem)",
+              background: "var(--panel-background)",
+              boxShadow: "var(--card-shadow)",
+            }}
+          >
+            <div
+              className="rounded-[calc(var(--card-radius)+0.25rem)] border p-4"
+              style={{ borderColor: "var(--border-color)", background: "var(--subsurface-background)" }}
+            >
+              <div className="flex items-center gap-2 text-theme-muted">
+                <Layers3 size={15} />
+                <p className="text-sm">Courses available</p>
+              </div>
+              <p className="mt-3 text-2xl font-bold text-theme-main">{courses.length}</p>
+            </div>
+            <div
+              className="rounded-[calc(var(--card-radius)+0.25rem)] border p-4"
+              style={{ borderColor: "var(--border-color)", background: "var(--subsurface-background)" }}
+            >
+              <div className="flex items-center gap-2 text-theme-muted">
+                <SlidersHorizontal size={15} />
+                <p className="text-sm">Categories</p>
+              </div>
+              <p className="mt-3 text-2xl font-bold text-theme-main">{categories.length}</p>
+            </div>
+            <div
+              className="rounded-[calc(var(--card-radius)+0.25rem)] border p-4"
+              style={{ borderColor: "var(--border-color)", background: "var(--subsurface-background)" }}
+            >
+              <div className="flex items-center gap-2 text-theme-muted">
+                <Sparkles size={15} />
+                <p className="text-sm">Matching now</p>
+              </div>
+              <p className="mt-3 text-2xl font-bold text-theme-main">{filteredCourses.length}</p>
+            </div>
+          </div>
+        </section>
 
-      {filteredCourses.length === 0 ? (
-        <div className="card-ui text-center text-gray-400">No courses matched your search.</div>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {filteredCourses.map((course) => {
-            const enrollment = enrollmentMap.get(course.id)
-            const progress = clampProgress(enrollment?.progress)
-            const progressStatus =
-              progress >= 100 ? "completed" : progress > 0 ? "in-progress" : "not-started"
-            const isRecommended =
-              profile?.skillLevel &&
-              normalizeDifficulty(course.difficulty) === profile.skillLevel.trim().toLowerCase()
-            const isSubmitting = enrollingCourseId === course.id
-            const theme = getCourseCardTheme(course.difficulty)
+        <section
+          className="space-y-4 p-4 md:p-5"
+          style={{
+            border: "var(--card-border)",
+            borderRadius: "calc(var(--card-radius) + 0.85rem)",
+            background: "var(--panel-background)",
+            boxShadow: "var(--card-shadow)",
+          }}
+        >
+          <div className="flex flex-col gap-2">
+            <h2 className="text-xl font-semibold text-theme-main">Search and filter</h2>
+            <p className="text-sm leading-6 text-theme-muted">
+              Narrow the catalog by keyword, difficulty, or category before opening the full
+              course overview.
+            </p>
+          </div>
 
-            return (
-              <article
-                key={course.id}
-                className={`group relative flex h-full flex-col justify-between gap-5 overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(13,16,24,0.98),rgba(26,15,46,0.92))] p-6 shadow-[0_18px_45px_rgba(8,6,22,0.34)] transition-all duration-300 hover:-translate-y-1 hover:border-white/15 hover:shadow-[0_26px_56px_rgba(18,12,38,0.44)] ${
-                  isRecommended ? "ring-1 ring-fuchsia-400/20" : ""
-                }`}
-              >
-                <div
-                  className={`absolute -right-12 -top-12 h-28 w-28 rounded-full blur-3xl transition-opacity duration-300 group-hover:opacity-90 ${theme.accentGlow}`}
+          <div className="grid gap-4 lg:grid-cols-[1.2fr_0.4fr_0.4fr]">
+            <div className="relative">
+              <Search
+                size={16}
+                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-theme-muted"
+              />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                className="pl-11"
+                placeholder="Search by course title, category, or preview"
+              />
+            </div>
+
+            <select
+              value={difficultyFilter}
+              onChange={(event) => setDifficultyFilter(event.target.value)}
+              className="input-ui h-12 px-4 text-sm"
+            >
+              <option value="all">All difficulties</option>
+              <option value="beginner">Beginner</option>
+              <option value="intermediate">Intermediate</option>
+              <option value="advanced">Advanced</option>
+            </select>
+
+            <select
+              value={categoryFilter}
+              onChange={(event) => setCategoryFilter(event.target.value)}
+              className="input-ui h-12 px-4 text-sm"
+            >
+              <option value="all">All categories</option>
+              {categories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+          </div>
+        </section>
+
+        {loading ? (
+          <div className="theme-empty-state flex min-h-[40vh] items-center justify-center p-6 text-sm">
+            Loading courses...
+          </div>
+        ) : error ? (
+          <div className="rounded-[calc(var(--card-radius)+0.5rem)] border border-red-500/20 bg-red-500/10 p-6 text-red-100">
+            {error}
+          </div>
+        ) : filteredCourses.length === 0 ? (
+          <div className="theme-empty-state p-8 text-center">
+            No courses matched your current search and filters.
+          </div>
+        ) : (
+          <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            {filteredCourses.map((course) => {
+              const metadata = getCourseCatalogMetadata(course)
+              const enrollment = enrollmentMap.get(course.id)
+              const moduleCount = modulesByCourse[course.id]?.length || 0
+              const recommended =
+                profile?.skillLevel &&
+                normalizeDifficulty(course.difficulty) === profile.skillLevel.trim().toLowerCase()
+
+              return (
+                <CourseCard
+                  key={course.id}
+                  category={metadata.category}
+                  courseId={course.id}
+                  description={metadata.shortDescription}
+                  difficulty={formatDifficulty(course.difficulty)}
+                  durationLabel={metadata.durationLabel}
+                  enrolledStudentsLabel={`${formatCompactNumber(metadata.students)} learners`}
+                  instructorName={metadata.instructor.name}
+                  moduleCount={moduleCount}
+                  primaryAction={
+                    enrollment
+                      ? {
+                          href: `/courses/${course.id}/learn`,
+                          label: "Continue Learning",
+                        }
+                      : {
+                          label: authenticated ? "Enroll Now" : "Sign In to Enroll",
+                          loading: enrollingCourseId === course.id,
+                          onClick: () => void handleEnroll(course.id),
+                        }
+                  }
+                  progress={typeof enrollment?.progress === "number" ? Math.round(enrollment.progress) : undefined}
+                  rating={metadata.rating}
+                  recommended={Boolean(recommended)}
+                  reviewCount={metadata.reviewCount}
+                  secondaryAction={{
+                    href: `/courses/${course.id}`,
+                    label: "View Details",
+                  }}
+                  title={course.title}
                 />
-                <div className={`absolute inset-x-6 top-0 h-px bg-gradient-to-r ${theme.accentLine}`} />
+              )
+            })}
+          </section>
+        )}
 
-                <div className="relative z-10 flex items-center justify-between gap-3">
-                  <span className={`rounded-full px-3 py-1 text-xs font-medium ${theme.badge}`}>
-                    {formatDifficulty(course.difficulty)}
-                  </span>
-                  {isRecommended ? (
-                    <span className={`rounded-full px-3 py-1 text-xs font-medium ${theme.recommended}`}>
-                      Recommended
-                    </span>
-                  ) : null}
-                </div>
-
-                <div className="relative z-10">
-                  <h2 className="text-xl font-semibold text-white">{course.title}</h2>
-                  <div className="mt-4 space-y-2 text-sm text-gray-400">
-                    <p>Course ID: {course.id}</p>
-                    <p>Published {formatRelativeDate(course.createdAt)}</p>
-                  </div>
-                </div>
-
-                <div className={`relative z-10 rounded-2xl border p-4 ${theme.meta}`}>
-                  <div className="mb-2 flex items-center justify-between text-sm text-gray-400">
-                    <span>{getCourseProgressLabel(progressStatus)}</span>
-                    <span>{progress}%</span>
-                  </div>
-                  <div className="h-2.5 rounded-full bg-[rgba(9,12,20,0.8)]">
-                    <div
-                      className={`h-2.5 rounded-full bg-gradient-to-r transition-all duration-300 ${theme.progress}`}
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
-                </div>
-
-                {enrollment ? (
-                  <Link
-                    href={`/courses/${course.id}`}
-                    className="relative z-10 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-600 px-4 py-3 text-sm font-medium text-white shadow-md shadow-fuchsia-950/20 transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02] hover:brightness-110 hover:shadow-[0_20px_40px_rgba(217,70,239,0.24)]"
-                  >
-                    Resume Course
-                    <ArrowRight size={16} />
-                  </Link>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => void handleEnroll(course.id)}
-                    disabled={isSubmitting}
-                    className="relative z-10 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-violet-400/30 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0))] px-4 py-3 text-sm font-medium text-white transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02] hover:border-fuchsia-400/45 hover:bg-gradient-to-r hover:from-violet-500/12 hover:to-fuchsia-500/12 hover:shadow-[0_16px_32px_rgba(139,92,246,0.16)] disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {authenticated
-                      ? isSubmitting
-                        ? "Enrolling..."
-                        : "Enroll Now"
-                      : "Sign In to Enroll"}
-                  </button>
-                )}
-              </article>
-            )
-          })}
+        <div className="flex justify-between gap-4 rounded-[calc(var(--card-radius)+0.85rem)] border px-5 py-4 text-sm text-theme-muted" style={{ borderColor: "var(--border-color)" }}>
+          <span>Use the catalog to compare tracks, course depth, and the best next step for your current level.</span>
+          {!authenticated ? <Link href="/signin" className="theme-link-muted font-medium">Sign in to start learning</Link> : null}
         </div>
-      )}
     </div>
   )
 }

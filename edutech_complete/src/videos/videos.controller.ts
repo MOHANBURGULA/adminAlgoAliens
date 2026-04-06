@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -14,6 +15,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { RedisRateLimit } from '../redis/redis-rate-limit.decorator'
 import { RedisRateLimitGuard } from '../redis/redis-rate-limit.guard'
 import { S3Service } from '../s3/s3.service'
+import { CreateVideoDto } from './dto/create-video.dto'
 import { VideosService } from './videos.service'
 
 @Controller('api/videos')
@@ -30,7 +32,7 @@ export class VideosController {
   @UseInterceptors(FileInterceptor('videoFile'))
   async uploadVideo(
     @Req() req: any,
-    @Body() body: any,
+    @Body() body: CreateVideoDto,
     @UploadedFile() file?: Express.Multer.File,
   ) {
     let videoUrl = body.videoUrl
@@ -39,7 +41,12 @@ export class VideosController {
       videoUrl = await this.s3Service.uploadFile(file.buffer, file.originalname, file.mimetype)
     }
 
+    if (!videoUrl?.trim()) {
+      throw new BadRequestException('Provide a video file or a videoUrl')
+    }
+
     return this.service.upload(req.user.id, {
+      courseId: body.courseId,
       title: body.title,
       description: body.description,
       videoUrl,

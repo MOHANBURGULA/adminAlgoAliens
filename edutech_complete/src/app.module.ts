@@ -22,6 +22,7 @@ import { RedisModule } from './redis/redis.module'
 import { ActivityModule } from './activity/activity.module'
 import { ExecutionModule } from './execution/execution.module'
 import { PdfModule } from './pdf/pdf.module'
+import { featureFlags, whenEnabled } from './config/feature-flags'
 
 @Module({
   imports: [
@@ -55,7 +56,7 @@ import { PdfModule } from './pdf/pdf.module'
     QuizAttemptsModule,
     FinalQuizModule,
     EvaluationModule,
-    AdminModule,
+    ...whenEnabled(featureFlags.enableAdmin, [AdminModule]),
     DashboardModule,
     LeaderboardModule,
     MailModule,

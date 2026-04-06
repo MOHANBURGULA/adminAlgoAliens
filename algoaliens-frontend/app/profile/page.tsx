@@ -95,7 +95,7 @@ export default function ProfilePage() {
 
         const [userRes, profileRes] = await Promise.all([
           apiClient.get("/api/users/me"),
-          apiClient.get("/api/users/profile"),
+          apiClient.get("/api/profile"),
         ])
 
         if (!cancelled) {
@@ -111,7 +111,7 @@ export default function ProfilePage() {
         }
 
         if (isAxiosStatus(loadError, 404)) {
-          router.replace("/profile-setup")
+          router.replace("/onboarding")
           return
         }
 
@@ -184,7 +184,7 @@ export default function ProfilePage() {
 
       const [userRes, profileRes] = await Promise.all([
         apiClient.get("/api/users/me"),
-        apiClient.get("/api/users/profile"),
+        apiClient.get("/api/profile"),
       ])
 
       const nextUser = userRes.data as UserResponse
@@ -354,9 +354,9 @@ export default function ProfilePage() {
                   }
                   className="input-ui"
                 >
-                  <option value="beginner">Beginner</option>
-                  <option value="intermediate">Intermediate</option>
-                  <option value="advanced">Advanced</option>
+                  <option value="Beginner">Beginner</option>
+                  <option value="Intermediate">Intermediate</option>
+                  <option value="Advanced">Advanced</option>
                 </select>
               </label>
 

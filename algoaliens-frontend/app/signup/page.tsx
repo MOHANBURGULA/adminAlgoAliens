@@ -9,9 +9,9 @@ import { Loader2 } from "lucide-react"
 import {
   clearAllSessions,
   clearAuthSession,
-  resolvePostAuthRoute,
   storeAuthSession,
 } from "@/lib/auth"
+import { resolveAuthenticatedRedirect } from "@/lib/auth-guard"
 import { apiClient } from "@/lib/api-client"
 import { getApiErrorMessage } from "@/lib/http"
 
@@ -85,7 +85,7 @@ export default function SignupPage() {
       }
 
       storeAuthSession(data.token, data.user)
-      router.replace(resolvePostAuthRoute(data.user))
+      router.replace(await resolveAuthenticatedRedirect(data.user))
       toast.success("Account created successfully!")
     } catch (error: unknown) {
       clearAuthSession()
@@ -100,17 +100,17 @@ export default function SignupPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-10">
-      <div className="w-full max-w-md rounded-2xl border border-purple-500/15 bg-[rgba(18,9,42,0.94)] p-8 shadow-lg shadow-black/30">
+      <div className="theme-auth-card w-full max-w-md p-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-semibold text-purple-300">Create an account</h1>
-          <p className="mt-2 text-gray-400">Get started with AlgoAliens for free</p>
+          <h1 className="text-3xl font-semibold accent-gradient-text">Create an account</h1>
+          <p className="mt-2 text-theme-muted">Get started with AlgoAliens for free</p>
         </div>
 
         <button
           type="button"
           onClick={() => void handleGoogleSignup()}
           disabled={googleLoading || submitting}
-          className="flex w-full items-center justify-center gap-3 rounded-xl border border-purple-500/25 px-4 py-3 text-white transition-all duration-300 hover:scale-[1.02] hover:bg-purple-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+          className="theme-social-button flex w-full px-4 py-3 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {googleLoading ? (
             <Loader2 className="animate-spin" size={18} />
@@ -126,14 +126,14 @@ export default function SignupPage() {
         </button>
 
         <div className="my-6 flex items-center gap-4">
-          <div className="h-px flex-1 bg-purple-500/15" />
-          <span className="text-xs uppercase tracking-[0.18em] text-purple-200/70">or</span>
-          <div className="h-px flex-1 bg-purple-500/15" />
+          <div className="theme-divider-line" />
+          <span className="text-xs uppercase tracking-[0.18em] text-theme-muted">or</span>
+          <div className="theme-divider-line" />
         </div>
 
         <form onSubmit={handleSignup} className="space-y-4">
           <div>
-            <label className="mb-2 block text-sm text-purple-100">Full Name</label>
+            <label className="mb-2 block text-sm text-theme-main">Full Name</label>
             <input
               type="text"
               value={name}
@@ -145,7 +145,7 @@ export default function SignupPage() {
           </div>
 
           <div>
-            <label className="mb-2 block text-sm text-purple-100">Email</label>
+            <label className="mb-2 block text-sm text-theme-main">Email</label>
             <input
               type="email"
               value={email}
@@ -157,7 +157,7 @@ export default function SignupPage() {
           </div>
 
           <div>
-            <label className="mb-2 block text-sm text-purple-100">Password</label>
+            <label className="mb-2 block text-sm text-theme-main">Password</label>
             <input
               type="password"
               value={password}
@@ -169,7 +169,7 @@ export default function SignupPage() {
           </div>
 
           <div>
-            <label className="mb-2 block text-sm text-purple-100">Confirm Password</label>
+            <label className="mb-2 block text-sm text-theme-main">Confirm Password</label>
             <input
               type="password"
               value={confirmPassword}
@@ -180,12 +180,16 @@ export default function SignupPage() {
             />
           </div>
 
-          <label className="flex items-center gap-3 text-sm text-gray-400">
+          <label className="flex items-center gap-3 text-sm text-theme-muted">
             <input
               type="checkbox"
               checked={acceptedTerms}
               onChange={(event) => setAcceptedTerms(event.target.checked)}
-              className="h-4 w-4 rounded border border-purple-500/30 bg-transparent accent-purple-600"
+              className="h-4 w-4 rounded border"
+              style={{
+                accentColor: "var(--accent-magenta)",
+                borderColor: "var(--border-color)",
+              }}
               disabled={submitting}
             />
             <span>I agree to the Terms and Privacy Policy</span>
@@ -200,7 +204,7 @@ export default function SignupPage() {
           <button
             type="submit"
             disabled={submitting || googleLoading}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-600 px-4 py-3 font-medium text-white shadow-md shadow-fuchsia-950/20 transition-all duration-300 hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60"
+            className="theme-button-primary flex w-full gap-2 px-4 py-3 font-medium disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? (
               <>
@@ -213,9 +217,9 @@ export default function SignupPage() {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-gray-400">
+        <p className="mt-6 text-center text-sm text-theme-muted">
           Already have an account?{" "}
-          <Link href="/signin" className="text-purple-300 hover:text-white">
+          <Link href="/signin" className="theme-link-muted">
             Sign in
           </Link>
         </p>

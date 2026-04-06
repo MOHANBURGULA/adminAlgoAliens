@@ -38,9 +38,9 @@ export function ProgressBar({
   return (
     <div className={cn("space-y-3", className)}>
       {(label || showValue) && (
-        <div className="flex items-center justify-between gap-3 text-sm text-slate-300">
+        <div className="flex items-center justify-between gap-3 text-sm text-theme-muted">
           <span>{label}</span>
-          {showValue ? <span className="font-medium text-white">{normalized}%</span> : null}
+          {showValue ? <span className="font-medium text-theme-main">{normalized}%</span> : null}
         </div>
       )}
 

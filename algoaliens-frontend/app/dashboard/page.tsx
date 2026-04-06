@@ -105,7 +105,7 @@ export default function DashboardPage() {
         const [dashboardRes, userRes, profileRes] = await Promise.all([
           apiClient.get("/api/dashboard"),
           apiClient.get("/api/users/me"),
-          apiClient.get("/api/users/profile"),
+          apiClient.get("/api/profile"),
         ])
 
         const dashboard = normalizeDashboard(dashboardRes.data as Partial<DashboardResponse>)
@@ -148,7 +148,7 @@ export default function DashboardPage() {
         }
 
         if (isAxiosStatus(loadError, 404)) {
-          router.replace("/profile-setup")
+          router.replace("/onboarding")
           return
         }
 
@@ -181,7 +181,7 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="card-ui flex min-h-[50vh] items-center justify-center text-gray-300">
+      <div className="card-ui flex min-h-[50vh] items-center justify-center p-6 text-theme-muted">
         Loading dashboard...
       </div>
     )
@@ -196,39 +196,38 @@ export default function DashboardPage() {
   }
 
   if (!data) {
-    return <div className="card-ui text-gray-300">No dashboard data available yet.</div>
+    return <div className="card-ui p-6 text-theme-muted">No dashboard data available yet.</div>
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <section className="grid gap-6 lg:grid-cols-[1.35fr_0.65fr]">
         <div className="app-panel p-8">
-          <p className="text-sm uppercase tracking-[0.3em] text-purple-200/70">Dashboard</p>
-          <h1 className="mt-3 text-3xl font-semibold text-white">Welcome back, {data.user.name}</h1>
-          <p className="mt-2 max-w-2xl text-sm text-gray-400">
+          <p className="text-sm uppercase tracking-[0.3em] text-theme-muted">Dashboard</p>
+          <h1 className="mt-3 text-4xl font-bold leading-tight text-theme-main">
+            Welcome back, {data.user.name}
+          </h1>
+          <p className="mt-3 max-w-2xl text-base leading-8 text-theme-muted">
             Your live learning snapshot includes enrollments, module completion, certificates, and
             profile details from the backend.
           </p>
 
           <div className="mt-6 flex flex-wrap gap-3">
-            <span className="rounded-full bg-purple-500/12 px-4 py-2 text-sm text-purple-100">
+            <span className="theme-chip px-4 py-2 text-sm">
               Skill level: {formatLabel(data.profile.skillLevel)}
             </span>
             {data.profile.interests.map((interest) => (
-              <span
-                key={interest}
-                className="rounded-full bg-indigo-500/12 px-4 py-2 text-sm text-indigo-100"
-              >
+              <span key={interest} className="theme-chip theme-chip-secondary px-4 py-2 text-sm">
                 {interest}
               </span>
             ))}
           </div>
 
-          <div className="mt-6 app-subcard">
+          <div className="mt-6 app-subcard p-5 md:p-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-sm text-gray-400">Current goal</p>
-                <p className="mt-2 text-lg font-medium text-white">
+                <p className="text-sm text-theme-muted">Current goal</p>
+                <p className="mt-2 text-lg font-medium text-theme-main">
                   {data.profile.goal || "No goal set yet"}
                 </p>
               </div>
@@ -241,16 +240,16 @@ export default function DashboardPage() {
         </div>
 
         <div className="app-card p-8">
-          <div className="flex items-center gap-3 text-white">
-            <Target className="text-purple-300" size={20} />
-            <h2 className="text-lg font-semibold">Learning progress</h2>
+          <div className="flex items-center gap-3 text-theme-main">
+            <Target className="text-[var(--accent-magenta)]" size={20} />
+            <h2 className="text-2xl font-semibold">Learning progress</h2>
           </div>
 
           <div className="mt-6">
             <ProgressBar value={completionRate} label="Estimated completion" />
           </div>
 
-          <div className="mt-6 space-y-4 text-sm text-gray-300">
+          <div className="mt-6 space-y-4 text-sm text-theme-muted">
             <div className="app-subcard !px-4 !py-3 flex items-center justify-between">
               <span>Completed modules</span>
               <span>{data.dashboard.completedModulesCount}</span>
@@ -268,42 +267,46 @@ export default function DashboardPage() {
       </section>
 
       <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-        <div className="app-stat">
-          <BookOpen className="text-purple-300" size={22} />
-          <p className="mt-4 text-3xl font-semibold text-white">{data.dashboard.enrolledCourses}</p>
-          <p className="mt-1 text-sm text-gray-400">Enrolled courses</p>
+        <div className="app-stat p-6 md:p-7">
+          <BookOpen className="text-[var(--accent-magenta)]" size={22} />
+          <p className="mt-4 text-3xl font-semibold text-theme-main">
+            {data.dashboard.enrolledCourses}
+          </p>
+          <p className="mt-1 text-sm text-theme-muted">Enrolled courses</p>
         </div>
 
-        <div className="app-stat">
-          <CheckCircle2 className="text-indigo-200" size={22} />
-          <p className="mt-4 text-3xl font-semibold text-white">
+        <div className="app-stat p-6 md:p-7">
+          <CheckCircle2 className="text-[var(--accent-cyan)]" size={22} />
+          <p className="mt-4 text-3xl font-semibold text-theme-main">
             {data.dashboard.completedModulesCount}
           </p>
-          <p className="mt-1 text-sm text-gray-400">Completed modules</p>
+          <p className="mt-1 text-sm text-theme-muted">Completed modules</p>
         </div>
 
-        <div className="app-stat">
-          <Award className="text-violet-200" size={22} />
-          <p className="mt-4 text-3xl font-semibold text-white">
+        <div className="app-stat p-6 md:p-7">
+          <Award className="text-[var(--accent-magenta)]" size={22} />
+          <p className="mt-4 text-3xl font-semibold text-theme-main">
             {data.dashboard.certificatesEarned}
           </p>
-          <p className="mt-1 text-sm text-gray-400">Certificates earned</p>
+          <p className="mt-1 text-sm text-theme-muted">Certificates earned</p>
         </div>
 
-        <div className="app-stat">
-          <User2 className="text-fuchsia-200" size={22} />
-          <p className="mt-4 text-3xl font-semibold text-white">
+        <div className="app-stat p-6 md:p-7">
+          <User2 className="text-[var(--accent-cyan)]" size={22} />
+          <p className="mt-4 text-3xl font-semibold text-theme-main">
             {data.dashboard.evaluationSummary.total}
           </p>
-          <p className="mt-1 text-sm text-gray-400">Evaluations submitted</p>
+          <p className="mt-1 text-sm text-theme-muted">Evaluations submitted</p>
         </div>
       </section>
 
       <section className="app-card p-8">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-white">Recent courses</h2>
-            <p className="mt-1 text-sm text-gray-400">Resume your latest enrolled courses.</p>
+            <h2 className="text-2xl font-semibold text-theme-main">Recent courses</h2>
+            <p className="mt-2 text-sm leading-7 text-theme-muted">
+              Resume your latest enrolled courses.
+            </p>
           </div>
 
           <Button asChild variant="secondary">
@@ -312,7 +315,7 @@ export default function DashboardPage() {
         </div>
 
         {data.recentCourses.length === 0 ? (
-          <div className="mt-6 rounded-2xl border border-dashed border-fuchsia-400/15 bg-[linear-gradient(180deg,rgba(16,20,30,0.96),rgba(23,16,34,0.92))] p-6 text-sm text-gray-400">
+          <div className="theme-empty-state mt-6 border-dashed p-6 text-sm">
             You have not enrolled in any courses yet.
           </div>
         ) : (
@@ -320,17 +323,19 @@ export default function DashboardPage() {
             {data.recentCourses.map((course) => (
               <div
                 key={course.id}
-                className="rounded-2xl border border-white/8 bg-[linear-gradient(180deg,rgba(16,20,30,0.96),rgba(24,16,36,0.94))] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-fuchsia-400/18"
+                className="theme-card theme-card-interactive p-6"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h3 className="text-lg font-medium text-white">{course.title}</h3>
-                    <p className="mt-1 text-sm text-gray-400">
+                    <h3 className="text-lg font-medium text-theme-main">{course.title}</h3>
+                    <p className="mt-1 text-sm text-theme-muted">
                       Difficulty: {formatLabel(course.difficulty)}
                     </p>
-                    <p className="mt-1 text-sm text-gray-400">Updated {formatDate(course.createdAt)}</p>
+                    <p className="mt-1 text-sm text-theme-muted">
+                      Updated {formatDate(course.createdAt)}
+                    </p>
                   </div>
-                  <span className="rounded-full bg-purple-500/12 px-3 py-1 text-xs text-purple-100">
+                  <span className="theme-chip px-3 py-1 text-xs">
                     {course.progress}%
                   </span>
                 </div>
@@ -340,8 +345,8 @@ export default function DashboardPage() {
                 </div>
 
                 <Link
-                  href={`/courses/${course.courseId}`}
-                  className="mt-5 inline-flex rounded-xl border border-purple-500/25 px-4 py-2 text-sm text-white transition-all duration-300 hover:scale-[1.02] hover:bg-purple-500/10"
+                  href={`/courses/${course.courseId}/learn`}
+                  className="theme-outline-link mt-5 px-4 py-2 text-sm"
                 >
                   Continue course
                 </Link>

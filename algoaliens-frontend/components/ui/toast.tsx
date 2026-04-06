@@ -10,23 +10,24 @@ export default function ToastViewport() {
       toastOptions={{
         duration: 4000,
         style: {
-          background: "#111827",
-          border: "1px solid #1f2937",
-          borderRadius: "18px",
-          boxShadow: "0 18px 45px rgba(0, 0, 0, 0.35)",
-          color: "#f8fafc",
+          backdropFilter: "var(--glass-filter)",
+          background: "var(--bg-surface)",
+          border: "var(--card-border)",
+          borderRadius: "calc(var(--card-radius) + 0.6rem)",
+          boxShadow: "var(--card-shadow-strong)",
+          color: "var(--text-main)",
           padding: "14px 16px",
         },
         success: {
           iconTheme: {
-            primary: "#22c55e",
-            secondary: "#f8fafc",
+            primary: "var(--success-color)",
+            secondary: "var(--text-main)",
           },
         },
         error: {
           iconTheme: {
-            primary: "#ef4444",
-            secondary: "#f8fafc",
+            primary: "var(--danger-color)",
+            secondary: "var(--text-main)",
           },
         },
       }}

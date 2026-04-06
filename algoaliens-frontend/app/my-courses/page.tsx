@@ -351,7 +351,7 @@ export default function MyCoursesPage() {
               </div>
 
               <Link
-                href={`/courses/${course.courseId}`}
+                href={`/courses/${course.courseId}/learn`}
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-600 px-4 py-3 text-sm font-medium text-white shadow-md shadow-fuchsia-950/20 transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02] hover:brightness-110 hover:shadow-[0_20px_40px_rgba(217,70,239,0.24)]"
               >
                 Continue

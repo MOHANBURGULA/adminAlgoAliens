@@ -8,17 +8,17 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default: "border-white/10 bg-white/[0.06] text-slate-100",
-        secondary: "border-purple-400/15 bg-purple-500/10 text-purple-100",
-        outline: "border-purple-500/20 bg-transparent text-purple-100",
-        beginner: "border-violet-400/20 bg-violet-500/10 text-violet-100",
-        intermediate: "border-purple-400/20 bg-purple-500/10 text-purple-100",
-        advanced: "border-fuchsia-400/20 bg-fuchsia-500/10 text-fuchsia-100",
-        info: "border-indigo-400/20 bg-indigo-500/10 text-indigo-100",
-        success: "border-violet-400/20 bg-violet-500/10 text-violet-100",
-        warning: "border-fuchsia-400/20 bg-fuchsia-500/10 text-fuchsia-100",
-        neutral: "border-slate-500/20 bg-slate-500/10 text-slate-200",
-        danger: "border-red-500/20 bg-red-500/10 text-red-100",
+        default: "theme-badge",
+        secondary: "theme-badge-accent",
+        outline: "theme-badge-outline",
+        beginner: "theme-badge-info",
+        intermediate: "theme-badge-accent",
+        advanced: "theme-badge-warning",
+        info: "theme-badge-info",
+        success: "theme-badge-success",
+        warning: "theme-badge-warning",
+        neutral: "theme-badge-neutral",
+        danger: "theme-badge-danger",
       },
     },
     defaultVariants: {

@@ -1,0 +1,53 @@
+AlgoAliens Recent Changes
+
+1. Homepage reverted to a clean, minimal, centered layout.
+   - Restored simple hero section
+   - Kept sections: Hero, Why Choose Us, Courses Preview, CTA, Footer
+   - Removed heavy visual effects, floating icons, and over-designed landing UI
+   - Simplified navbar styling
+
+2. Course details page simplified.
+   - Kept only:
+     - Course hero
+     - Learning outcomes
+     - Course snapshot
+     - Course content
+   - Removed:
+     - Requirements
+     - Who this course is for
+     - Related courses
+     - Bottom extra CTA section
+
+3. Cleanup done.
+   - Removed unused floating icon component
+   - Cleaned landing page styles in globals.css
+   - Simplified course page data loading after removing unused sections
+
+4. Verification
+   - Frontend production build completed successfully using:
+     npm run build
+
+5. Backend video upload + database startup fix
+   Time: 2026-04-05 20:50:44 +05:30
+   - Updated `edutech_complete/src/videos/video.entity.ts`
+     Change description:
+     Added `courseId` as a nullable integer column for video records, and set a default empty string for `description`.
+     This prevents TypeORM startup from failing when older `videos` rows exist without the new `description` field.
+   - Added `edutech_complete/src/videos/dto/create-video.dto.ts`
+     Change description:
+     Created a DTO with validation for `courseId`, `title`, `description`, and optional `videoUrl`.
+     This makes `/api/videos` follow the app's global validation pipeline properly.
+   - Updated `edutech_complete/src/videos/videos.controller.ts`
+     Change description:
+     Switched the request body to the new DTO, forwarded `courseId` to the service, and added a guard that requires either an uploaded file or a `videoUrl`.
+   - Updated `edutech_complete/src/videos/videos.service.ts`
+     Change description:
+     Added stricter input validation, trimmed incoming values, and saved `courseId`, `title`, `description`, and `videoUrl` explicitly.
+     This also aligns the save logic with the activity eligibility check already present in the service.
+   - Added `edutech_complete/src/videos/videos.types.ts`
+     Change description:
+     Introduced a typed input shape for the video upload service to avoid loose `any` usage.
+   - Verification performed
+     Change description:
+     Backend build completed successfully with `npm.cmd run build`.
+     Runtime check confirmed the original database error about `videos.description` null values is resolved.
