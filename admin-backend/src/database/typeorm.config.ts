@@ -4,6 +4,10 @@ import { TypeOrmModuleOptions } from '@nestjs/typeorm'
 import { PostgresConnectionOptions } from 'typeorm/driver/postgres/PostgresConnectionOptions'
 import { TYPEORM_ENTITIES } from './typeorm.entities'
 
+const MIGRATIONS_GLOB = [
+  join(__dirname, '..', 'migrations', '*.{ts,js}').replace(/\\/g, '/'),
+]
+
 function readConfigValue(config: ConfigService | undefined, key: string) {
   return config?.get<string>(key)?.trim() || process.env[key]?.trim()
 }
@@ -70,7 +74,7 @@ export function createDataSourceOptions(config?: ConfigService): PostgresConnect
   return {
     ...createSharedPostgresOptions(config),
     entities: TYPEORM_ENTITIES,
-    migrations: [join(__dirname, '..', 'migrations', '*.{ts,js}').replace(/\\/g, '/')],
+    migrations: MIGRATIONS_GLOB,
   }
 }
 
@@ -78,5 +82,7 @@ export function createTypeOrmModuleOptions(config?: ConfigService): TypeOrmModul
   return {
     ...createSharedPostgresOptions(config),
     autoLoadEntities: true,
+    migrations: MIGRATIONS_GLOB,
+    migrationsRun: readBooleanConfig(config, 'TYPEORM_MIGRATIONS_RUN'),
   }
 }

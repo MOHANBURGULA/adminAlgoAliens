@@ -436,7 +436,39 @@ Future connection path:
   learner-side frontend once that repository is available in the workspace
 
 
-20. FINAL STATUS
+20. MIGRATION REPAIR / STARTUP SCHEMA ALIGNMENT
+-----------------------------------------------
+
+Change:
+
+- Added a new backend repair migration for drifted local databases
+- Updated TypeORM runtime config to support migration execution on backend boot
+- Added TYPEORM_MIGRATIONS_RUN to env documentation and local backend env setup
+
+Description:
+
+- Some local databases had already recorded older migrations as executed while
+  still missing newer schema fields
+- This caused admin endpoints such as /api/admin/dashboard and
+  /api/admin/courses to fail at runtime with missing column errors like
+  Course.description
+- The repair migration now adds the missing courses columns:
+  - description
+  - keywords
+  - categoryId
+- The same repair also aligns videos.feedback, videos.rejectionCount, and the
+  users.uuid nullability/default state for older databases
+- The backend can now be configured to auto-run pending migrations during
+  startup, which reduces repeat local schema drift during development
+
+Result:
+
+- The admin backend schema was brought back in sync with the current entities
+- Pending drift no longer blocks the admin dashboard and course listing routes
+- Local development is safer because schema updates can be applied on boot
+
+
+21. FINAL STATUS
 ----------------
 
 Major requested integrations completed:
@@ -449,9 +481,12 @@ Major requested integrations completed:
 - Local compiler integration path
 - Theory reader system with progress tracking
 - Course schema compatibility fixes
+- Migration repair and startup schema alignment for older local databases
 
 Latest verification completed:
 
+- admin-backend migration:run passed
+- admin-backend schema/entity compatibility check passed
 - admin-backend build passed
 - admin-frontend build passed
 
