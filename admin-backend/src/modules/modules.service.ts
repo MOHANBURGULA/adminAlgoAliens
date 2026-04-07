@@ -7,6 +7,7 @@ import { ModuleDocument } from './module-document.entity'
 import { ModuleProgress } from './module-progress.entity'
 import { CACHE_TTL_SECONDS, CacheKeys } from '../redis/cache.helpers'
 import { RedisService } from '../redis/redis.service'
+import { S3Service } from '../s3/s3.service'
 
 @Injectable()
 export class ModulesService {
@@ -25,6 +26,7 @@ export class ModulesService {
     private progressRepo: Repository<ModuleProgress>,
 
     private readonly redisService: RedisService,
+    private readonly s3Service: S3Service,
   ) {}
 
   // Get all modules for a course (ordered)
@@ -54,7 +56,7 @@ export class ModulesService {
     const cacheKey = CacheKeys.moduleDocuments(moduleId)
     const cachedDocuments = await this.redisService.getCache<ModuleDocument[]>(cacheKey)
     if (cachedDocuments !== null) {
-      return cachedDocuments
+      return this.attachDocumentAccessUrls(cachedDocuments)
     }
 
     const documents = await this.documentRepo.find({ where: { moduleId } })
@@ -64,7 +66,7 @@ export class ModulesService {
       CACHE_TTL_SECONDS.moduleDocuments,
     )
 
-    return documents
+    return this.attachDocumentAccessUrls(documents)
   }
 
   async getActivitiesByModule(moduleId: number) {
@@ -215,5 +217,14 @@ export class ModulesService {
     } = question as Record<string, unknown>
 
     return rest
+  }
+
+  private attachDocumentAccessUrls(documents: ModuleDocument[]) {
+    return Promise.all(
+      documents.map(async (document) => ({
+        ...document,
+        accessUrl: await this.s3Service.getDownloadUrl(document.fileUrl),
+      })),
+    )
   }
 }

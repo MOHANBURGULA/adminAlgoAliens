@@ -22,6 +22,18 @@ type TheoryViewerProps = {
   moduleId: number
 }
 
+function createProgressSnapshot(
+  moduleId: number,
+  progress: Pick<TheoryProgress, "percentageCompleted" | "scrollPosition" | "lastPage">,
+) {
+  return JSON.stringify({
+    moduleId,
+    percentageCompleted: Math.round(progress.percentageCompleted),
+    scrollPosition: Math.round(progress.scrollPosition),
+    lastPage: progress.lastPage,
+  })
+}
+
 const DEFAULT_PROGRESS: TheoryProgress = {
   moduleId: 0,
   userId: 0,
@@ -43,6 +55,10 @@ export function TheoryViewer({ moduleId }: TheoryViewerProps) {
   const [progress, setProgress] = useState<TheoryProgress>({
     ...DEFAULT_PROGRESS,
     moduleId,
+  })
+  const [viewerInitialProgress, setViewerInitialProgress] = useState({
+    lastPage: null as number | null,
+    scrollPosition: 0,
   })
   const [authResolved, setAuthResolved] = useState(false)
   const [userId, setUserId] = useState<number | null>(null)
@@ -78,23 +94,40 @@ export function TheoryViewer({ moduleId }: TheoryViewerProps) {
   const loadTheory = useCallback(async () => {
     try {
       setLoading(true)
+      autosaveReadyRef.current = false
+      lastSavedSnapshotRef.current = ""
+
       const theoryResource = await getTheoryResource(moduleId)
       setResource(theoryResource)
+
+      let nextProgress: TheoryProgress
 
       if (userId) {
         const savedProgress = await getTheoryProgress(moduleId, userId)
         if (savedProgress) {
-          setProgress(savedProgress)
+          nextProgress = savedProgress
           setCurrentPage(savedProgress.lastPage || 1)
         } else {
-          setProgress({
+          nextProgress = {
             ...DEFAULT_PROGRESS,
             moduleId,
             userId,
-          })
+          }
+          setCurrentPage(1)
+        }
+      } else {
+        nextProgress = {
+          ...DEFAULT_PROGRESS,
+          moduleId,
         }
       }
 
+      setProgress(nextProgress)
+      setViewerInitialProgress({
+        lastPage: nextProgress.lastPage,
+        scrollPosition: nextProgress.scrollPosition,
+      })
+      lastSavedSnapshotRef.current = createProgressSnapshot(moduleId, nextProgress)
       setError("")
       autosaveReadyRef.current = true
     } catch (loadError) {
@@ -133,11 +166,10 @@ export function TheoryViewer({ moduleId }: TheoryViewerProps) {
       return
     }
 
-    const snapshot = JSON.stringify({
-      moduleId,
-      percentageCompleted: Math.round(progress.percentageCompleted),
-      scrollPosition: Math.round(progress.scrollPosition),
+    const snapshot = createProgressSnapshot(moduleId, {
       lastPage: progress.lastPage,
+      percentageCompleted: progress.percentageCompleted,
+      scrollPosition: progress.scrollPosition,
     })
 
     if (snapshot === lastSavedSnapshotRef.current) {
@@ -170,6 +202,77 @@ export function TheoryViewer({ moduleId }: TheoryViewerProps) {
   }, [currentPage, pageCount, resource?.fileType])
 
   const canMarkCompleted = progress.percentageCompleted >= 90 || Boolean(progress.completed)
+
+  const handlePdfCurrentPageChange = useCallback((page: number) => {
+    setCurrentPage((current) => (current === page ? current : page))
+  }, [])
+
+  const handlePdfPageCountChange = useCallback((count: number) => {
+    setPageCount((current) => (current === count ? current : count))
+  }, [])
+
+  const handleEstimatedReadingTimeChange = useCallback((minutes: number) => {
+    setEstimatedReadingTime((current) => (current === minutes ? current : minutes))
+  }, [])
+
+  const handlePdfProgressChange = useCallback(
+    ({
+      lastPage,
+      percentageCompleted,
+      scrollPosition,
+    }: {
+      lastPage: number
+      percentageCompleted: number
+      scrollPosition: number
+    }) => {
+      setProgress((current) => {
+        if (
+          current.lastPage === lastPage &&
+          current.percentageCompleted === percentageCompleted &&
+          current.scrollPosition === scrollPosition
+        ) {
+          return current
+        }
+
+        return {
+          ...current,
+          lastPage,
+          percentageCompleted,
+          scrollPosition,
+        }
+      })
+    },
+    [],
+  )
+
+  const handleMarkdownProgressChange = useCallback(
+    ({
+      percentageCompleted,
+      scrollPosition,
+    }: {
+      lastPage: null
+      percentageCompleted: number
+      scrollPosition: number
+    }) => {
+      setProgress((current) => {
+        if (
+          current.lastPage === null &&
+          current.percentageCompleted === percentageCompleted &&
+          current.scrollPosition === scrollPosition
+        ) {
+          return current
+        }
+
+        return {
+          ...current,
+          lastPage: null,
+          percentageCompleted,
+          scrollPosition,
+        }
+      })
+    },
+    [],
+  )
 
   const handleBookmark = async () => {
     if (!userId) {
@@ -307,35 +410,23 @@ export function TheoryViewer({ moduleId }: TheoryViewerProps) {
         >
           {resource.fileType === "pdf" ? (
             <PdfViewer
-              fileUrl={resource.fileUrl}
-              initialPage={progress.lastPage}
-              initialScrollPosition={progress.scrollPosition}
-              onCurrentPageChange={setCurrentPage}
-              onPageCountChange={setPageCount}
-              onProgressChange={({ lastPage, percentageCompleted, scrollPosition }) =>
-                setProgress((current) => ({
-                  ...current,
-                  lastPage,
-                  percentageCompleted,
-                  scrollPosition,
-                }))
-              }
+              key={`pdf-${moduleId}-${resource.fileUrl}`}
+              moduleId={moduleId}
+              initialPage={viewerInitialProgress.lastPage}
+              initialScrollPosition={viewerInitialProgress.scrollPosition}
+              onCurrentPageChange={handlePdfCurrentPageChange}
+              onPageCountChange={handlePdfPageCountChange}
+              onProgressChange={handlePdfProgressChange}
               theme={theme}
               zoom={zoom}
             />
           ) : (
             <MarkdownViewer
-              fileUrl={resource.fileUrl}
-              initialScrollPosition={progress.scrollPosition}
-              onEstimatedReadingTimeChange={setEstimatedReadingTime}
-              onProgressChange={({ percentageCompleted, scrollPosition }) =>
-                setProgress((current) => ({
-                  ...current,
-                  lastPage: null,
-                  percentageCompleted,
-                  scrollPosition,
-                }))
-              }
+              key={`markdown-${moduleId}-${resource.fileUrl}`}
+              moduleId={moduleId}
+              initialScrollPosition={viewerInitialProgress.scrollPosition}
+              onEstimatedReadingTimeChange={handleEstimatedReadingTimeChange}
+              onProgressChange={handleMarkdownProgressChange}
               searchQuery={searchQuery}
               theme={theme}
               zoom={zoom}

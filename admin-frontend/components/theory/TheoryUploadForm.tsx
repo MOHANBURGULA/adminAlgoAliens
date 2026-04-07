@@ -111,7 +111,7 @@ export function TheoryUploadForm({ moduleId, onUploaded, resource }: TheoryUploa
             {`${resource.fileType.toUpperCase()} - uploaded ${new Date(resource.createdAt).toLocaleString()}`}
           </p>
           <a
-            href={resource.fileUrl}
+            href={resource.accessUrl ?? resource.fileUrl}
             target="_blank"
             rel="noreferrer"
             className="mt-3 inline-flex text-sm text-fuchsia-300 transition hover:text-fuchsia-200"

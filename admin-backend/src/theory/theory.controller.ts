@@ -6,11 +6,14 @@ import {
   Param,
   Post,
   Req,
+  Res,
+  StreamableFile,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common'
 import { FileInterceptor } from '@nestjs/platform-express'
+import { Response } from 'express'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { AdminGuard } from '../admin/admin.guard'
 import { TheoryService } from './theory.service'
@@ -53,5 +56,18 @@ export class TheoryController {
   @UseGuards(JwtAuthGuard)
   getTheoryByModule(@Param('moduleId', ParseIntPipe) moduleId: number) {
     return this.theoryService.getTheoryByModule(moduleId)
+  }
+
+  @Get(':moduleId/file')
+  @UseGuards(JwtAuthGuard)
+  async getTheoryFile(
+    @Param('moduleId', ParseIntPipe) moduleId: number,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const file = await this.theoryService.getTheoryFilePayload(moduleId)
+    res.setHeader('Content-Type', file.contentType)
+    res.setHeader('Content-Disposition', `inline; filename="${file.filename}"`)
+    res.setHeader('Cache-Control', 'private, max-age=60')
+    return new StreamableFile(file.buffer)
   }
 }

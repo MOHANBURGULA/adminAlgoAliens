@@ -14,10 +14,12 @@ import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { oneDark, oneLight } from "react-syntax-highlighter/dist/esm/styles/prism"
+import { getApiErrorMessage } from "@/lib/http"
 import { estimateMarkdownReadingMinutes } from "@/lib/theory"
+import { getTheoryMarkdown } from "@/lib/theory"
 
 type MarkdownViewerProps = {
-  fileUrl: string
+  moduleId: number
   initialScrollPosition?: number
   onEstimatedReadingTimeChange: (minutes: number) => void
   onProgressChange: (payload: {
@@ -64,7 +66,7 @@ function highlightNode(node: ReactNode, query: string): ReactNode {
 }
 
 export function MarkdownViewer({
-  fileUrl,
+  moduleId,
   initialScrollPosition = 0,
   onEstimatedReadingTimeChange,
   onProgressChange,
@@ -79,24 +81,23 @@ export function MarkdownViewer({
   const hasRestoredPositionRef = useRef(false)
 
   useEffect(() => {
-    const controller = new AbortController()
+    let cancelled = false
 
     const loadMarkdown = async () => {
       try {
         setLoading(true)
-        const response = await fetch(fileUrl, { signal: controller.signal })
-        if (!response.ok) {
-          throw new Error(`Unable to load markdown content (${response.status}).`)
+        const rawMarkdown = await getTheoryMarkdown(moduleId)
+        if (cancelled) {
+          return
         }
-        const rawMarkdown = await response.text()
         setMarkdown(rawMarkdown)
         setError("")
       } catch (loadError) {
-        if (!controller.signal.aborted) {
-          setError(loadError instanceof Error ? loadError.message : "Unable to load markdown content.")
+        if (!cancelled) {
+          setError(getApiErrorMessage(loadError))
         }
       } finally {
-        if (!controller.signal.aborted) {
+        if (!cancelled) {
           setLoading(false)
         }
       }
@@ -104,8 +105,10 @@ export function MarkdownViewer({
 
     void loadMarkdown()
 
-    return () => controller.abort()
-  }, [fileUrl])
+    return () => {
+      cancelled = true
+    }
+  }, [moduleId])
 
   useEffect(() => {
     onEstimatedReadingTimeChange(estimateMarkdownReadingMinutes(markdown))

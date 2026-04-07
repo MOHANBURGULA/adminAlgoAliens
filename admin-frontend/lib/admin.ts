@@ -58,7 +58,7 @@ export async function uploadBlobWithSignedUrl(
 
   return {
     key,
-    fileUrl: uploadUrl.split("?")[0],
+    fileUrl: key,
   }
 }
 

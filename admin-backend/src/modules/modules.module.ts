@@ -6,9 +6,13 @@ import { ModuleDocument } from './module-document.entity'
 import { ModuleProgress } from './module-progress.entity'
 import { ModulesService } from './modules.service'
 import { ModulesController } from './modules.controller'
+import { S3Module } from '../s3/s3.module'
 
 @Module({
-  imports: [TypeOrmModule.forFeature([CourseModule, ModuleActivity, ModuleDocument, ModuleProgress])],
+  imports: [
+    TypeOrmModule.forFeature([CourseModule, ModuleActivity, ModuleDocument, ModuleProgress]),
+    S3Module,
+  ],
   controllers: [ModulesController],
   providers: [ModulesService],
   exports: [ModulesService]

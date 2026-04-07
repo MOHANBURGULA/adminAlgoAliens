@@ -46,6 +46,7 @@ type ModuleDocument = {
   label: string
   title: string
   fileUrl: string
+  accessUrl?: string
 }
 
 type ModuleItem = {
@@ -459,7 +460,7 @@ export default function AdminModuleContentPage() {
                   >
                     <div className="flex items-start justify-between gap-3">
                       <a
-                        href={document.fileUrl}
+                        href={document.accessUrl ?? document.fileUrl}
                         target="_blank"
                         rel="noreferrer"
                         className="text-sm text-white hover:text-indigo-300"

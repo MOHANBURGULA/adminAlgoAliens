@@ -9,6 +9,7 @@ export type TheoryResource = {
   moduleId: number
   title: string
   fileUrl: string
+  accessUrl?: string
   fileType: TheoryFileType
   createdAt: string
 }
@@ -40,6 +41,22 @@ export async function uploadTheoryResource(formData: FormData) {
 export async function getTheoryResource(moduleId: number) {
   const response = await apiClient.get(`/api/theory/${moduleId}`)
   return response.data as TheoryResource | null
+}
+
+export async function getTheoryMarkdown(moduleId: number) {
+  const response = await apiClient.get(`/api/theory/${moduleId}/file`, {
+    responseType: "blob",
+  })
+
+  return response.data.text()
+}
+
+export async function getTheoryPdfData(moduleId: number) {
+  const response = await apiClient.get<ArrayBuffer>(`/api/theory/${moduleId}/file`, {
+    responseType: "arraybuffer",
+  })
+
+  return new Uint8Array(response.data)
 }
 
 export async function saveTheoryProgress(payload: {
@@ -75,4 +92,3 @@ export function estimateMarkdownReadingMinutes(markdown: string) {
 export function estimatePdfReadingMinutes(pageCount: number) {
   return Math.max(1, Math.ceil(pageCount * 2))
 }
-

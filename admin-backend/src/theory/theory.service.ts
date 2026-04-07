@@ -71,14 +71,45 @@ export class TheoryService {
       fileType,
     })
 
-    return this.theoryResourceRepo.save(resource)
+    const savedResource = await this.theoryResourceRepo.save(resource)
+    return this.serializeTheoryResource(savedResource)
   }
 
   async getTheoryByModule(moduleId: number) {
-    return this.theoryResourceRepo.findOne({
+    const resource = await this.theoryResourceRepo.findOne({
       where: { moduleId },
       order: { createdAt: 'DESC', id: 'DESC' },
     })
+
+    if (!resource) {
+      return null
+    }
+
+    return this.serializeTheoryResource(resource)
+  }
+
+  async getTheoryFilePayload(moduleId: number) {
+    const resource = await this.theoryResourceRepo.findOne({
+      where: { moduleId },
+      order: { createdAt: 'DESC', id: 'DESC' },
+    })
+
+    if (!resource) {
+      throw new NotFoundException('Theory resource not found')
+    }
+
+    const fileResponse = await this.s3Service.getFile(resource.fileUrl)
+    if (!fileResponse.Body) {
+      throw new NotFoundException('Theory file content not found')
+    }
+
+    const buffer = Buffer.from(await fileResponse.Body.transformToByteArray())
+
+    return {
+      buffer,
+      contentType: fileResponse.ContentType || this.getDefaultContentType(resource.fileType),
+      filename: this.buildFilename(resource.title, resource.fileType),
+    }
   }
 
   async saveTheoryProgress(userId: number, payload: SaveTheoryProgressPayload) {
@@ -184,5 +215,27 @@ export class TheoryService {
     }
 
     return Math.max(0, Math.floor(value))
+  }
+
+  private getDefaultContentType(fileType: 'pdf' | 'md') {
+    return fileType === 'pdf' ? 'application/pdf' : 'text/markdown; charset=utf-8'
+  }
+
+  private buildFilename(title: string, fileType: 'pdf' | 'md') {
+    const baseName =
+      title
+        .trim()
+        .replace(/[^A-Za-z0-9._-]+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'theory-resource'
+
+    return `${baseName}.${fileType}`
+  }
+
+  private async serializeTheoryResource(resource: TheoryResource) {
+    return {
+      ...resource,
+      accessUrl: await this.s3Service.getDownloadUrl(resource.fileUrl),
+    }
   }
 }
